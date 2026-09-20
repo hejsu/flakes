@@ -1,9 +1,7 @@
 # Typst: A typesetting software simpler than Latex.
 { lib, config, pkgs, ... }:
 
-let
-  cfg = config.modules.dev.typst;
-in {
+let cfg = config.modules.dev.typst; in {
   options.modules.dev.typst = {
     enable = lib.mkEnableOption "Typst typesetting";
   };

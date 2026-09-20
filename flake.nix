@@ -20,13 +20,13 @@
 
   outputs = inputs@{ self, nixpkgs, ... }:
     with import ./lib { inherit (nixpkgs) lib; };
-      mkFlake inputs {
-        systems  = [ "aarch64-darwin" "x86_64-linux" "aarch64-linux" ];
-        hosts    = mapHosts   ./hosts;
+    mkFlake inputs {
+      systems = [ "aarch64-darwin" "x86_64-linux" "aarch64-linux" ];
+      hosts = mapHosts ./hosts;
 
-        modules  = mapModules ./modules  id;
-        profiles = mapModules ./profiles id;
-        packages = mapModules ./packages id;
-        overlays = mapModules ./overlays import;
-      };
+      modules = mapModules ./modules id;
+      profiles = mapModules ./profiles id;
+      packages = mapModules ./packages id;
+      overlays = mapModules ./overlays import;
+    };
 }

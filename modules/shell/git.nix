@@ -1,8 +1,6 @@
 { ss, lib, config, pkgs, ... }:
 
-let
-  cfg = config.modules.shell.git;
-in {
+let cfg = config.modules.shell.git; in {
   options.modules.shell.git = {
     enable = lib.mkEnableOption "Git and related tooling";
   };

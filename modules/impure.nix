@@ -1,4 +1,5 @@
-{ ss, pkgs, lib, config, ... }: let
+{ ss, pkgs, lib, config, ... }:
+let
   inherit (lib) mkIf mkOption types;
   inherit (lib) pipe filter hasPrefix removePrefix concatStringsSep;
   inherit (lib) assertMsg optional optionalString pathExists foldl' attrValues;
@@ -96,7 +97,8 @@
     (map (x: "replace \"${x.target}\""))
     (concatStringsSep "\n")
   ];
-in {
+in
+{
   options.home.impure = {
     enable = lib.mkEnableOption "impure home symlinks redirection";
 

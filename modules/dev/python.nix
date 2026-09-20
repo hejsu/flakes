@@ -1,8 +1,6 @@
 { lib, config, pkgs, ... }:
 
-let
-  cfg = config.modules.dev.python;
-in {
+let cfg = config.modules.dev.python; in {
   options.modules.dev.python = {
     enable = lib.mkEnableOption "Python development environment";
   };
@@ -16,8 +14,8 @@ in {
     home.sessionPath = [ "${config.home.dataDir}/python/bin" ];
 
     environment.variables = {
-      PYTHONUSERBASE      = "${config.home.dataDir}/python";
-      PYTHON_HISTORY      = "${config.home.dataDir}/python/python_history"; 
+      PYTHONUSERBASE = "${config.home.dataDir}/python";
+      PYTHON_HISTORY = "${config.home.dataDir}/python/python_history";
       PYTHONPYCACHEPREFIX = "${config.home.cacheDir}/python";
     };
   };

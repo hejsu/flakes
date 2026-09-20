@@ -1,8 +1,6 @@
 { ss, pkgs, lib, config, ... }:
 
-let
-  cfg = config.modules.shell.nvim;
-in {
+let cfg = config.modules.shell.nvim; in {
   options.modules.shell.nvim = {
     enable = lib.mkEnableOption "Neovim";
   };
@@ -19,7 +17,7 @@ in {
     };
 
     environment.shellAliases = {
-      v  = "nvim";
+      v = "nvim";
     };
 
     home.configFile.nvim.source = "${ss.configDir}/nvim";

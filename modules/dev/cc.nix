@@ -1,12 +1,10 @@
 # As the most basic language in a system even compile the system component
 # Use the system support toolchain and tools firstly.
-{ lib, config, pkgs, ... }: 
+{ lib, config, pkgs, ... }:
 
 with lib;
 
-let
-  cfg = config.modules.dev.cc;
-in {
+let cfg = config.modules.dev.cc; in {
   options.modules.dev.cc = {
     enable = mkEnableOption "C/C++ development tools";
   };

@@ -5,52 +5,54 @@ with lib;
 rec {
   # resolveProfiles :: attrs -> attrs -> listOf path
   resolveProfiles = profiles: hostProfiles:
-    concatLists (mapAttrsToList (k: v:
-      if v == null then 
-        []
-      else 
-        optional (profiles ? "${k}.${v}") profiles."${k}.${v}"
-    ) hostProfiles);
+    concatLists (mapAttrsToList
+      (k: v:
+        if v == null then
+          [ ]
+        else
+          optional (profiles ? "${k}.${v}") profiles."${k}.${v}"
+      )
+      hostProfiles);
 
-  mkHostModules = {
-    host
-  , hostName
-  , pkgs
-  , profiles ? {}
-  , extraModules ? []
-  }: [
-    {
-      nixpkgs.pkgs = pkgs;
-      networking.hostName = mkDefault hostName;
-    }
-  ]
-  ++ (resolveProfiles profiles host.profiles)
-  ++ host.includes
-  ++ [
-    host.hardware
-    host.settings
-    { inherit (host) modules; }
-  ]
-  ++ extraModules;
+  mkHostModules =
+    { host
+    , hostName
+    , pkgs
+    , profiles ? { }
+    , extraModules ? [ ]
+    }: [
+      {
+        nixpkgs.pkgs = pkgs;
+        networking.hostName = mkDefault hostName;
+      }
+    ]
+    ++ (resolveProfiles profiles host.profiles)
+    ++ host.includes
+    ++ [
+      host.hardware
+      host.settings
+      { inherit (host) modules; }
+    ]
+    ++ extraModules;
 
   # Flake 顶层构建器
   mkFlake = inputs@{ self, nixpkgs, ... }:
-    { hosts ? {}
+    { hosts ? { }
     , systems ? [ "aarch64-darwin" "x86_64-linux" ]
-    , modules ? {}
-    , profiles ? {}
-    , overlays ? {}
-    , packages ? {}
+    , modules ? { }
+    , profiles ? { }
+    , overlays ? { }
+    , packages ? { }
     , ...
     }:
     let
       overlayList = attrValues overlays;
 
       # 区分全局自动导入的 modules 与飞地模块 adhoc
-      isAdhoc      = n: hasPrefix "adhoc." n;
-      autoModules  = filterAttrs (n: _: !isAdhoc n) modules;
+      isAdhoc = n: hasPrefix "adhoc." n;
+      autoModules = filterAttrs (n: _: !isAdhoc n) modules;
       adhocModules = mapAttrs' (n: v: nameValuePair (removePrefix "adhoc." n) v)
-                       (filterAttrs (n: _: isAdhoc n) modules);
+        (filterAttrs (n: _: isAdhoc n) modules);
 
       # 全局架构单例 Nixpkgs 缓存（大幅降低重复求值开销）
       mkPkgs = system: import nixpkgs {
@@ -64,29 +66,29 @@ rec {
 
       # 上下文生成器
       mkSS = platformKey: {
-        modules = (mapAttrs (_: i: i.${platformKey} or {}) inputs) // {
+        modules = (mapAttrs (_: i: i.${platformKey} or { }) inputs) // {
           adhoc = adhocModules;
         };
         sourceDir = self;
         configDir = self + /config;
-        keys      = import ./keys.nix;
+        keys = import ./keys.nix;
       };
 
       # 通用系统架构嗅探器：通过反射函数形参动态补全占位符，微秒级惰性直读 system
       getSystem = path:
         let fn = import path; in
-        (if isFunction fn then fn (mapAttrs (_: _: {}) (functionArgs fn)) else fn).system;
+        (if isFunction fn then fn (mapAttrs (_: _: { }) (functionArgs fn)) else fn).system;
 
       platforms = {
         darwin = {
-          builder   = inputs.darwin.lib.darwinSystem;
+          builder = inputs.darwin.lib.darwinSystem;
           moduleKey = "darwinModules";
-          match     = s: hasSuffix "-darwin" s;
+          match = s: hasSuffix "-darwin" s;
         };
         nixos = {
-          builder   = inputs.nixpkgs.lib.nixosSystem;
+          builder = inputs.nixpkgs.lib.nixosSystem;
           moduleKey = "nixosModules";
-          match     = s: hasSuffix "-linux" s;
+          match = s: hasSuffix "-linux" s;
         };
       };
 
@@ -113,17 +115,18 @@ rec {
 
       mkConfigs = p: mapAttrs (buildHost p) (filterAttrs (_: path: p.match (getSystem path)) hosts);
       exportedModules = autoModules // { default = { imports = attrValues autoModules; }; };
-    in {
+    in
+    {
       inherit lib overlays;
 
       darwinModules = exportedModules;
-      nixosModules  = exportedModules;
+      nixosModules = exportedModules;
 
       darwinConfigurations = mkConfigs platforms.darwin;
-      nixosConfigurations  = mkConfigs platforms.nixos;
+      nixosConfigurations = mkConfigs platforms.nixos;
 
       packages = genAttrs systems (system:
-        mapAttrs (_: p: (pkgsFor system).callPackage p {}) packages
+        mapAttrs (_: p: (pkgsFor system).callPackage p { }) packages
       );
 
       formatter = genAttrs systems (system:

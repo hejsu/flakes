@@ -1,8 +1,6 @@
 { ss, config, lib, options, ... }:
 
-let
-  cfg = config.modules.sops;
-in {
+let cfg = config.modules.sops; in {
   imports = [
     ss.modules.sops-nix.sops
   ];
@@ -22,7 +20,7 @@ in {
     # Alias for sops.secrets
     secrets = mkOption {
       type = options.sops.secrets.type;
-      default = {};
+      default = { };
       description = "Alias for sops.secrets";
     };
 
@@ -41,7 +39,7 @@ in {
 
       sshKeyPaths = mkOption {
         type = listOf (either path str);
-        default = [];
+        default = [ ];
         description = "Paths to SSH keys used for age.";
       };
     };
@@ -49,7 +47,7 @@ in {
     gnupg = {
       sshKeyPaths = mkOption {
         type = listOf (either path str);
-        default = [];
+        default = [ ];
         description = "Paths to GPG SSH keys.";
       };
     };

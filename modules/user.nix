@@ -2,12 +2,12 @@
 
 {
   options = {
-    modules = {};
+    modules = { };
 
     # Creates a simpler, polymorphic alias for users.users.$USER.
     user = lib.mkOption {
       type = options.users.users.type.nestedTypes.elemType;
-      default = {};
+      default = { };
       description = "The primary user account configuration";
     };
   };
@@ -20,9 +20,9 @@
 
     user = {
       home = lib.mkDefault (
-        if pkgs.stdenv.hostPlatform.isDarwin then 
+        if pkgs.stdenv.hostPlatform.isDarwin then
           "/Users/${config.user.name}"
-        else 
+        else
           "/home/${config.user.name}"
       );
     };

@@ -1,8 +1,6 @@
 { ss, config, lib, ... }:
 
-let
-  cfg = config.modules.apps.zed;
-in {
+let cfg = config.modules.apps.zed; in {
   options.modules.apps.zed.enable = lib.mkEnableOption "Zed editor";
 
   config = lib.mkIf cfg.enable {

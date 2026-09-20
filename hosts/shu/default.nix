@@ -16,7 +16,7 @@
 
     shell = {
       fish.enable = true;
-      git.enable  = true;
+      git.enable = true;
       nvim.enable = true;
       yazi.enable = true;
     };
@@ -30,14 +30,14 @@
     };
 
     dev = {
-      cc.enable     = true;
-      typst.enable  = true;
+      cc.enable = true;
+      typst.enable = true;
       python.enable = true;
     };
 
     apps = {
       kitty.enable = true;
-      zed.enable   = true;
+      zed.enable = true;
     };
 
     services = {
@@ -57,8 +57,8 @@
 
     launchd.user.envVariables = {
       GEMINI_CLI_HOME = "${config.home.configDir}/gemini";
-      COPILOT_HOME    = "${config.home.configDir}/copilot";
-      CODEX_HOME      = "${config.home.configDir}/codex";
+      COPILOT_HOME = "${config.home.configDir}/copilot";
+      CODEX_HOME = "${config.home.configDir}/codex";
     };
 
     # Host & User identity
@@ -115,14 +115,14 @@
     homebrew = {
       enable = true;
       enableFishIntegration = true;
-      onActivation.cleanup  = "zap";
+      onActivation.cleanup = "zap";
 
       onActivation.extraEnv = {
-        XDG_CONFIG_HOME          = "${config.home.configDir}";
-        HOMEBREW_API_DOMAIN      = "https://mirrors.tuna.tsinghua.edu.cn/homebrew-bottles/api";
+        XDG_CONFIG_HOME = "${config.home.configDir}";
+        HOMEBREW_API_DOMAIN = "https://mirrors.tuna.tsinghua.edu.cn/homebrew-bottles/api";
         HOMEBREW_BREW_GIT_REMOTE = "https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/brew.git";
         HOMEBREW_CORE_GIT_REMOTE = "https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/homebrew-core.git";
-        HOMEBREW_PIP_INDEX_URL   = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple";
+        HOMEBREW_PIP_INDEX_URL = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple";
       };
 
       brews = [

@@ -1,8 +1,6 @@
 { ss, pkgs, lib, config, ... }:
 
-let
-  cfg = config.modules.shell.yazi;
-in {
+let cfg = config.modules.shell.yazi; in {
   options.modules.shell.yazi = {
     enable = lib.mkEnableOption "Yazi file manager";
   };

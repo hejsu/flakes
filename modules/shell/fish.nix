@@ -1,13 +1,11 @@
 { ss, lib, config, pkgs, ... }:
 
-let
-  cfg = config.modules.shell.fish;
-in {
+let cfg = config.modules.shell.fish; in {
   options.modules.shell.fish = with lib; with types; {
-    enable          = mkEnableOption "Fish shell";
-    loginInit       = mkOption { type = lines; default = ""; description = "Fish script fragments to run in login shell."; };
+    enable = mkEnableOption "Fish shell";
+    loginInit = mkOption { type = lines; default = ""; description = "Fish script fragments to run in login shell."; };
     interactiveInit = mkOption { type = lines; default = ""; description = "Fish script fragments to run in interactive shell."; };
-    rcFiles         = mkOption { type = listOf (either str path); default = []; description = "List of fish files to source in interactive shell."; };
+    rcFiles = mkOption { type = listOf (either str path); default = [ ]; description = "List of fish files to source in interactive shell."; };
   };
 
   config = lib.mkIf cfg.enable {
@@ -19,7 +17,7 @@ in {
 
     programs.fish = {
       enable = true;
-      shellAliases = lib.mkForce {};
+      shellAliases = lib.mkForce { };
       shellAbbrs = config.environment.shellAliases;
 
       loginShellInit = ''
@@ -50,11 +48,11 @@ in {
         ${lib.concatMapStringsSep "\n" (f: "test -r '${toString f}'; and source '${toString f}'") cfg.rcFiles}
       '';
 
-      "fish/conf.d".source       = "${ss.configDir}/fish/conf.d";
-      "fish/functions".source    = "${ss.configDir}/fish/functions";
+      "fish/conf.d".source = "${ss.configDir}/fish/conf.d";
+      "fish/functions".source = "${ss.configDir}/fish/functions";
       "fish/fish_plugins".source = "${ss.configDir}/fish/fish_plugins";
-      "fish/completions".source  = "${ss.configDir}/fish/completions";
-      "fish/themes".source       = "${ss.configDir}/fish/themes";
+      "fish/completions".source = "${ss.configDir}/fish/completions";
+      "fish/themes".source = "${ss.configDir}/fish/themes";
     };
 
     user.packages = with pkgs; [
