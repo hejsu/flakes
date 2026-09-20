@@ -1,4 +1,4 @@
-{ ss, config, lib, pkgs, options, ... }:
+{ config, lib, pkgs, options, ... }:
 
 let
   cfg = config.modules.services.cliproxyapi;
@@ -27,7 +27,7 @@ in {
 
   config = lib.mkIf cfg.enable (lib.mkMerge [
     (lib.optionalAttrs (options ? launchd) {
-      system.activationScripts.extraActivation.text = ''
+      system.activationScripts.cliproxyapi.text = ''
         mkdir -p "${config.home.configDir}/cli-proxy-api" "${stateDir}/logs" "${stateDir}/static"
         chown -R ${config.user.name}:staff "${config.home.configDir}/cli-proxy-api" "${stateDir}" 2>/dev/null || true
       '';

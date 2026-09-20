@@ -14,3 +14,9 @@ result-*
 
 # Fish dynamic runtime state
 config/fish/fish_variables
+
+# Stray eval output
+nix-eval.json
+
+# WorkBuddy AI workspace data (agent memory / logs)
+.workbuddy-ai/

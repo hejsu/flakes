@@ -46,13 +46,13 @@
   };
 
   # 4. Setting (Machine-specific Native Overrides & Patches)
-  settings = { pkgs, lib, config, ... }: {
+  settings = { lib, config, ... }: {
     home.sessionVariables = {
       # secretive
       SSH_AUTH_SOCK = "${config.home.dir}/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh";
 
       # code cli
-      VSCODE_CLI_DATA_DIR = "${config.home.dir}/Application/vscode/code-portable-data/cli-data";
+      VSCODE_CLI_DATA_DIR = "${config.home.dir}/Applications/vscode/code-portable-data/cli-data";
     };
 
     launchd.user.envVariables = {

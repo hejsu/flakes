@@ -127,7 +127,7 @@ rec {
       );
 
       formatter = genAttrs systems (system:
-        (pkgsFor system).nixfmt-rfc-style
+        (pkgsFor system).nixpkgs-fmt
       );
     };
 }

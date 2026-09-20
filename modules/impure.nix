@@ -35,11 +35,9 @@
           return 0
         fi
 
-        # Remove existing symlink (directory, file, or broken) safely
+        # Only symlinks reach here: real files/dirs already returned early above.
         if [[ -L "$2" ]]; then
           rm -f "$2"
-        elif [[ -d "$2" ]]; then
-          rm -rf "$2"
         fi
 
         mkdir -p "$(dirname "$2")"

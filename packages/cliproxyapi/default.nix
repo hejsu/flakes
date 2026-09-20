@@ -17,7 +17,7 @@ let
     hash = "sha256-AgyWs2xkgkUqKKOSY1dAaN9BdEqo73BKmPpYMzSxVds=";
   };
 in
-buildGoModule rec {
+buildGoModule {
   pname = "cli-proxy-api";
   inherit version src;
 

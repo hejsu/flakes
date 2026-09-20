@@ -1,4 +1,4 @@
-{ ss, config, lib, pkgs, options, ... }:
+{ ss, config, lib, options, ... }:
 
 let
   cfg = config.modules.sops;
@@ -58,8 +58,8 @@ in {
   config = lib.mkIf cfg.enable {
     assertions = [
       {
-        assertion = cfg.defaultSopsFile != null;
-        message = "modules.sops: defaultSopsFile is null and no secrets.yaml was found in hosts/${config.networking.hostName}/assets/.";
+        assertion = builtins.pathExists cfg.defaultSopsFile;
+        message = "modules.sops: defaultSopsFile (${toString cfg.defaultSopsFile}) does not exist. Expected hosts/${config.networking.hostName}/assets/secrets.yaml.";
       }
     ];
 

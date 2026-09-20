@@ -1,11 +1,8 @@
 keys:
   - &local age1alcjc6ee8lwlukf4ndqdcjct43ee5k2t6h4zsukxdkd7kph5fdrs9s95fe
 creation_rules:
-  - path_regex: hosts/aarch64-darwin/shu/assets/.*
-    key_groups:
-    - age:
-      - *local
-  - path_regex: hosts/x86_64-linux/[^/]+/assets/.*
+  # Per-host secrets live at hosts/<hostName>/assets/ (see modules/sops.nix)
+  - path_regex: hosts/[^/]+/assets/.*
     key_groups:
     - age:
       - *local
