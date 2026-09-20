@@ -21,7 +21,7 @@
 
     user = {
       home = lib.mkDefault (
-        if pkgs.stdenv.isDarwin then 
+        if pkgs.stdenv.hostPlatform.isDarwin then 
           "/Users/${config.user.name}"
         else 
           "/home/${config.user.name}"

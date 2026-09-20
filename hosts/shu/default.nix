@@ -1,4 +1,4 @@
-{ ... }: {
+{ ss, ... }: {
   # 1. Target System Architecture
   system = "aarch64-darwin";
 
@@ -8,7 +8,13 @@
     role = "laptop";
   };
 
-  # 2. Modules 
+  # 3. Adhoc Enclave Modules
+  includes = [
+    ss.modules.adhoc.kitty
+    ss.modules.adhoc.zed
+  ];
+
+  # 4. Modules 
   modules = {
     xdg.enable = true;
 
@@ -19,23 +25,32 @@
       yazi.enable = true;
     };
 
+    sops = {
+      enable = true;
+      secrets.hello = {
+        owner = "suspen";
+        group = "staff";
+      };
+    };
+
     dev = {
       cc.enable     = true;
       typst.enable  = true;
       python.enable = true;
     };
 
-    services.cliproxyapi.enable = true;
+    apps = {
+      kitty.enable = true;
+      zed.enable   = true;
+    };
+
+    services = {
+      cliproxyapi.enable = true;
+    };
   };
 
   # 4. Setting (Machine-specific Native Overrides & Patches)
-  setting = { pkgs, lib, config, ss, ... }: {
-    imports = [
-      ss.modules.sops-nix.sops
-    ];
-
-    home.impure.enable = true;
-
+  settings = { pkgs, lib, config, ss, ... }: {
     home.sessionVariables = {
       # secretive
       SSH_AUTH_SOCK = "${config.home.dir}/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh";
@@ -50,42 +65,8 @@
       CODEX_HOME      = "${config.home.configDir}/codex";
     };
 
-    # Sops configuration
-    sops = {
-      age.generateKey = false;
-      age.sshKeyPaths = [];
-      gnupg.sshKeyPaths = [];
-
-      defaultSopsFile = ./assets/secrets.yaml;
-      age.keyFile = "${config.home.configDir}/sops/age/keys.txt";
-
-      secrets.hello = {
-        owner = config.user.name;
-        group = "staff";
-      };
-    };
-
     # Host & User identity
     system.primaryUser = config.user.name;
-
-    # macOS GUI Applications config symlinks
-    home.configFile = {
-      kitty.source = "${ss.configDir}/kitty";
-      "zed/settings.json".source = "${ss.configDir}/zed/settings.json";
-    };
-
-    # User packages
-    user.packages = with pkgs; [
-      # Nix language tooling
-      nixd
-      nil
-
-      # Development & host utilities
-      cliproxyapi
-      dash
-      sops
-      age
-    ];
 
     # macOS System preferences
     system.stateVersion = 6;
@@ -116,6 +97,7 @@
       substituters = https://mirrors.ustc.edu.cn/nix-channels/store https://cache.nixos.org
       http-connections = 50
       max-substitution-jobs = 32
+      eval-cores = 0
     '';
 
     launchd.daemons.nix-gc = {
@@ -129,18 +111,6 @@
       "/run/current-system/sw"
       "/etc/profiles/per-user/${config.user.name}"
     ];
-
-    fonts.packages = with pkgs; [
-      fira
-      fira-code
-      nerd-fonts.fira-code
-      nerd-fonts.symbols-only
-      julia-mono
-      noto-fonts-cjk-sans
-      noto-fonts-cjk-serif
-    ];
-
-    time.timeZone = "Asia/Shanghai";
 
     # Darwin-specific shell optimizations
     programs.fish.useBabelfish = true;
@@ -173,8 +143,6 @@
         "zotero"
         "tencent-meeting"
         "feishu"
-        "kitty"
-        "zed"
         "visual-studio-code"
 
         "the-unarchiver"

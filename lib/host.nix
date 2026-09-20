@@ -20,6 +20,12 @@ rec {
         description = "Profile selectors matching profiles/<key>/<val>.nix";
       };
 
+      includes = mkOption {
+        type = types.listOf types.deferredModule;
+        default = [];
+        description = "Extra modules to include directly for this host";
+      };
+
       modules = mkOption {
         type = types.attrs;
         default = {};
@@ -32,7 +38,7 @@ rec {
         description = "Hardware, disks, and bootloader configurations";
       };
 
-      setting = mkOption {
+      settings = mkOption {
         type = types.deferredModule;
         default = {};
         description = "Machine-specific native OS configuration overrides";
@@ -40,16 +46,17 @@ rec {
     };
   };
 
-  # Evaluates and validates a host module against hostSubmodule
-  evalHost = module:
+  # 规范求值：基于 hostSubmodule 验证并填充默认值
+  evalHost = { module, specialArgs ? {} }:
     (evalModules {
       modules = [ hostSubmodule module ];
+      inherit specialArgs;
     }).config;
 
-  # Discovers hosts from directory
+  # mapHosts 仅扫描并记录路径，推迟到 mkFlake 带着 ss 上下文完整求值
   mapHosts = dir:
     mapAttrs (hostName: _:
-      evalHost (dir + "/${hostName}/default.nix")
+      dir + "/${hostName}/default.nix"
     ) (filterAttrs (n: v:
         v == "directory"
         && !(hasPrefix "." n)
