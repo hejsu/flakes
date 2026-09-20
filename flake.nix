@@ -21,7 +21,7 @@
   outputs = inputs@{ self, nixpkgs, ... }:
     let lib = import ./lib { inherit (nixpkgs) lib; }; in
       with lib; mkFlake inputs {
-        systems  = [ "aarch64-darwin" ];
+        systems  = [ "aarch64-darwin" "x86_64-linux" ];
         hosts    = mapHosts   ./hosts;
 
         modules  = mapModules ./modules  id;

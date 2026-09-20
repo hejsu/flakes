@@ -1,20 +1,16 @@
 { ss, ... }: {
-  # 1. Target System Architecture
   system = "aarch64-darwin";
 
-  # 2. Profile / Preset Selectors
   profiles = {
     user = "suspen";
     role = "laptop";
   };
 
-  # 3. Adhoc Enclave Modules
   includes = [
     ss.modules.adhoc.kitty
     ss.modules.adhoc.zed
   ];
 
-  # 4. Modules 
   modules = {
     xdg.enable = true;
 
@@ -50,7 +46,7 @@
   };
 
   # 4. Setting (Machine-specific Native Overrides & Patches)
-  settings = { pkgs, lib, config, ss, ... }: {
+  settings = { pkgs, lib, config, ... }: {
     home.sessionVariables = {
       # secretive
       SSH_AUTH_SOCK = "${config.home.dir}/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh";
@@ -151,6 +147,8 @@
         "appcleaner"
         "tailscale-app"
         "secretive"
+
+        "coteditor"
       ];
     };
   };

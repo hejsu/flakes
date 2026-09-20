@@ -36,7 +36,7 @@ rec {
   # Flake 顶层构建器
   mkFlake = inputs@{ self, nixpkgs, ... }:
     { hosts ? {}
-    , systems ? [ "aarch64-darwin" ]
+    , systems ? [ "aarch64-darwin" "x86_64-linux" ]
     , modules ? {}
     , profiles ? {}
     , overlays ? {}
@@ -58,7 +58,9 @@ rec {
         overlays = overlayList;
         config.allowUnfree = true;
       };
-      pkgsFor = system: (genAttrs systems mkPkgs).${system};
+      pkgsBySystem = genAttrs systems mkPkgs;
+      pkgsFor = system:
+        pkgsBySystem.${system} or (throw "Host system '${system}' is not in the supported 'systems' list in flake.nix: ${toJSON systems}");
 
       # 上下文生成器
       mkSS = platformKey: {

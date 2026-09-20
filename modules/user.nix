@@ -1,4 +1,3 @@
-# modules/core.nix --- Core dotfiles module (user alias & global options)
 { lib, options, config, pkgs, ... }:
 
 {
