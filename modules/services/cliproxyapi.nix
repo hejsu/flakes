@@ -1,10 +1,10 @@
-{ config, lib, pkgs, options, ... }:
+{ ss, config, lib, pkgs, options, ... }:
 
 let
-  cfg = config.services.cliproxyapi;
+  cfg = config.modules.services.cliproxyapi;
   stateDir = "${config.home.stateDir}/cliproxyapi";
 in {
-  options.services.cliproxyapi = {
+  options.modules.services.cliproxyapi = {
     enable = lib.mkEnableOption "CLIProxyAPI user service";
 
     package = lib.mkOption {
