@@ -48,11 +48,7 @@ rec {
     let
       overlayList = attrValues overlays;
 
-      # 区分全局自动导入的 modules 与飞地模块 adhoc
-      isAdhoc = n: hasPrefix "adhoc." n;
-      autoModules = filterAttrs (n: _: !isAdhoc n) modules;
-      adhocModules = mapAttrs' (n: v: nameValuePair (removePrefix "adhoc." n) v)
-        (filterAttrs (n: _: isAdhoc n) modules);
+      autoModules = modules;
 
       # 全局架构单例 Nixpkgs 缓存（大幅降低重复求值开销）
       mkPkgs = system: import nixpkgs {
@@ -66,9 +62,7 @@ rec {
 
       # 上下文生成器
       mkSS = platformKey: {
-        modules = (mapAttrs (_: i: i.${platformKey} or { }) inputs) // {
-          adhoc = adhocModules;
-        };
+        modules = mapAttrs (_: i: i.${platformKey} or { }) inputs;
         sourceDir = self;
         configDir = self + /config;
         keys = import ./keys.nix;

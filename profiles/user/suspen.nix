@@ -15,6 +15,8 @@
     dash
     sops
     age
+
+    opencode
   ];
 }
 
