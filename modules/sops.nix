@@ -17,39 +17,17 @@ let cfg = config.modules.sops; in {
       '';
     };
 
+    ageKeyFile = mkOption {
+      type = either path str;
+      default = "${config.home.configDir}/sops/age/keys.txt";
+      description = "Path to the age private key file.";
+    };
+
     # Alias for sops.secrets
     secrets = mkOption {
       type = options.sops.secrets.type;
       default = { };
       description = "Alias for sops.secrets";
-    };
-
-    age = {
-      keyFile = mkOption {
-        type = either path str;
-        default = "${config.home.configDir}/sops/age/keys.txt";
-        description = "Path to the age private key file.";
-      };
-
-      generateKey = mkOption {
-        type = bool;
-        default = false;
-        description = "Whether to automatically generate an age key.";
-      };
-
-      sshKeyPaths = mkOption {
-        type = listOf (either path str);
-        default = [ ];
-        description = "Paths to SSH keys used for age.";
-      };
-    };
-
-    gnupg = {
-      sshKeyPaths = mkOption {
-        type = listOf (either path str);
-        default = [ ];
-        description = "Paths to GPG SSH keys.";
-      };
     };
   };
 
@@ -64,10 +42,12 @@ let cfg = config.modules.sops; in {
     sops = {
       inherit (cfg) defaultSopsFile;
       age = {
-        inherit (cfg.age) keyFile generateKey sshKeyPaths;
+        keyFile = cfg.ageKeyFile;
+        generateKey = false;
+        sshKeyPaths = [ ];
       };
       gnupg = {
-        inherit (cfg.gnupg) sshKeyPaths;
+        sshKeyPaths = [ ];
       };
       secrets = lib.mkAliasDefinitions options.modules.sops.secrets;
     };

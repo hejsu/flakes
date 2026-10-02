@@ -1,5 +1,5 @@
 { ... }: {
   imports = [
-    ./sing-box.nix
+    ./cliproxyapi.nix
   ];
 }
