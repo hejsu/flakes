@@ -25,6 +25,10 @@
         else
           "/home/${config.user.name}"
       );
+    } // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+      isNormalUser = true;
+      group = "users";
+      extraGroups = [ "wheel" ];
     };
 
     users.users.${config.user.name} = lib.mkAliasDefinitions options.user;
