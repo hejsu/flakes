@@ -78,11 +78,15 @@ rec {
           builder = inputs.darwin.lib.darwinSystem;
           moduleKey = "darwinModules";
           match = s: hasSuffix "-darwin" s;
+          extraModules = [
+            { _module.freeformType = lib.types.attrsOf lib.types.anything; }
+          ];
         };
         nixos = {
           builder = inputs.nixpkgs.lib.nixosSystem;
           moduleKey = "nixosModules";
           match = s: hasSuffix "-linux" s;
+          extraModules = [ ];
         };
       };
 
@@ -103,7 +107,7 @@ rec {
           modules = mkHostModules {
             inherit host hostName profiles;
             pkgs = pkgsFor host.system;
-            extraModules = attrValues autoModules;
+            extraModules = (attrValues autoModules) ++ platform.extraModules;
           };
         };
 

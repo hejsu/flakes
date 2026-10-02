@@ -47,4 +47,18 @@
       KeyRepeat = 2;
     };
   };
+
+  homebrew = {
+    enable = true;
+    enableFishIntegration = true;
+    onActivation.cleanup = "zap";
+
+    onActivation.extraEnv = {
+      XDG_CONFIG_HOME = "${config.home.configDir}";
+      HOMEBREW_API_DOMAIN = "https://mirrors.tuna.tsinghua.edu.cn/homebrew-bottles/api";
+      HOMEBREW_BREW_GIT_REMOTE = "https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/brew.git";
+      HOMEBREW_CORE_GIT_REMOTE = "https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/homebrew-core.git";
+      HOMEBREW_PIP_INDEX_URL = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple";
+    };
+  };
 }

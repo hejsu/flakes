@@ -1,6 +1,10 @@
 {
   system = "aarch64-darwin";
 
+  includes = [
+    ../../modules/_darwin
+  ];
+
   profiles = {
     user = "suspen";
     role = "laptop";
