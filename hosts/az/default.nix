@@ -17,7 +17,13 @@
     };
 
     sops = {
-      enable = false;
+      enable = true;
+      ageKeyFile = "/var/lib/sops-nix/key.txt";
+
+      secrets.tsAuthKey = { 
+        owner = "suspen"; 
+        group = "users"; 
+      };
     };
 
     services = {
@@ -27,12 +33,20 @@
 
 
   ## Local config
-  settings = { ss, ... }: {
+  settings = { ss, pkgs, config, ... }: {
     nix.optimise.automatic = true;
     nix.settings = {
       experimental-features = [ "nix-command" "flakes" ];
 
       auto-optimise-store = true;
+
+      substituters = [
+        "https://cache.nixos.org"
+        "https://nix-community.cachix.org" 
+      ];
+      trusted-public-keys = [
+        "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      ];
     };
 
     # Workaround for https://github.com/NixOS/nix/issues/8502
@@ -57,9 +71,19 @@
     user = {
       openssh.authorizedKeys.keys = [ ss.keys.ss0 ];
       initialHashedPassword = "$6$A/Ms/0m62sATO5ge$8dAjphC5IF5bKOa8W2/MEsVgW8HaL1lRZBeUi3ZO8hk1lkuU25HQVQ5m8zQobvtJZAk3NPRjeJq3zh7EQEdML0";
+
+      # Daily driver shell. root stays on bash on purpose (rescue/logins).
+      shell = pkgs.fish;
     };
 
     services.journald.settings.Journal.SystemMaxUse = "200M";
+
+    services.tailscale = {
+      enable = true;
+      authKeyFile = config.sops.secrets.tsAuthKey.path;  
+      extraUpFlags = [ "--ssh" ];
+      openFirewall = true;
+    };
 
     system.stateVersion = "23.11";
   };

@@ -18,9 +18,13 @@ let cfg = config.modules.sops; in {
     };
 
     ageKeyFile = mkOption {
-      type = either path str;
+      type = with types; nullOr (either path str);
       default = "${config.home.configDir}/sops/age/keys.txt";
-      description = "Path to the age private key file.";
+      description = ''
+        Path to the age private key file.
+        Defaults to the user-owned key; set to null to rely solely on
+        SSH-derived identities (sops-nix defaults to the host ed25519 key).
+      '';
     };
 
     # Alias for sops.secrets
@@ -43,12 +47,11 @@ let cfg = config.modules.sops; in {
       inherit (cfg) defaultSopsFile;
       age = {
         keyFile = cfg.ageKeyFile;
-        generateKey = false;
+        generateKey = true;
         sshKeyPaths = [ ];
       };
-      gnupg = {
-        sshKeyPaths = [ ];
-      };
+      gnupg.sshKeyPaths = [ ];
+
       secrets = lib.mkAliasDefinitions options.modules.sops.secrets;
     };
   };

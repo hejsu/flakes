@@ -1,7 +1,12 @@
 keys:
   - &local age1alcjc6ee8lwlukf4ndqdcjct43ee5k2t6h4zsukxdkd7kph5fdrs9s95fe
+  - &azure age183puvw68raq7twehq0gsz9c6hq0m8ze0sctt8mskj7ms2qhh33ls5feddg
 creation_rules:
-  # Per-host secrets live at hosts/<hostName>/assets/ (see modules/sops.nix)
+  - path_regex: hosts/az/assets/.*
+    key_groups:
+    - age:
+      - *azure
+      - *local
   - path_regex: hosts/[^/]+/assets/.*
     key_groups:
     - age:
