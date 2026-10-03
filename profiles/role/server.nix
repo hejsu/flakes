@@ -1,7 +1,7 @@
 # profiles/role/server.nix
 #
 # Baseline preset for headless / server environments across macOS & Linux.
-{ pkgs, lib, ... }: {
+{ lib, ... }: {
   #### Housekeeping
   # Weekly nix GC
   nix.gc = {
@@ -13,23 +13,27 @@
   # Weekly TRIM (SSD/VPS-friendly)
   services.fstrim.enable = true;
 
-  # Clear >1 month-old logs every week
-  systemd = {
-    services.clear-log = {
-      description = "Clear >1 month-old logs every week";
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = "${pkgs.systemd}/bin/journalctl --vacuum-time=21d";
-      };
-    };
-    timers.clear-log = {
-      wantedBy = [ "timers.target" ];
-      partOf = [ "clear-log.service" ];
-      timerConfig.OnCalendar = "weekly UTC";
-    };
-  };
-
   #### Power
   powerManagement.cpuFreqGovernor = lib.mkDefault "ondemand";
+
+  services.journald.settings.Journal = {
+    SystemMaxUse = "200M";
+    MaxRetentionSec = "21d";
+  };
+
+  nix.optimise.automatic = true;
+  nix.settings = {
+    experimental-features = [ "nix-command" "flakes" ];
+
+    auto-optimise-store = true;
+
+    substituters = [
+      "https://cache.nixos.org"
+      "https://nix-community.cachix.org" 
+    ];
+    trusted-public-keys = [
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+    ];
+  };
 }
 

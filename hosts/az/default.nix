@@ -35,37 +35,10 @@
   };
 
   ## Local config
-  settings = { config, ... }: {
-    nix.optimise.automatic = true;
-    nix.settings = {
-      experimental-features = [ "nix-command" "flakes" ];
-
-      auto-optimise-store = true;
-
-      substituters = [
-        "https://cache.nixos.org"
-        "https://nix-community.cachix.org" 
-      ];
-      trusted-public-keys = [
-        "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-      ];
-    };
-
-    # Workaround for https://github.com/NixOS/nix/issues/8502
-    # (logrotate checkConfig fails when /var/log/journal doesn't exist yet)
-    services.logrotate.checkConfig = false;
-
-    networking.domain = "t0tivnfifftexijyidewzlguwg.lx.internal.cloudapp.net";
-
+  settings = { ... }: {
     user = {
       initialHashedPassword = "$6$A/Ms/0m62sATO5ge$8dAjphC5IF5bKOa8W2/MEsVgW8HaL1lRZBeUi3ZO8hk1lkuU25HQVQ5m8zQobvtJZAk3NPRjeJq3zh7EQEdML0";
     };
-
-    services.journald.settings.Journal.SystemMaxUse = "200M";
-
-    # Machine-specific: the auth key comes from sops. Everything else about
-    # tailscale lives in the network profile.
-    services.tailscale.authKeyFile = config.sops.secrets.tsAuthKey.path;
 
     system.stateVersion = "23.11";
   };
