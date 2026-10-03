@@ -2,7 +2,11 @@
 
 let cfg = config.modules.xdg; in {
   options.modules.xdg = {
-    enable = lib.mkEnableOption "XDG environment variables and configuration";
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enforce XDG base directories for common programs.";
+    };
   };
 
   config = lib.mkIf cfg.enable {

@@ -4,15 +4,13 @@ with builtins;
 with lib;
 rec {
   # resolveProfiles :: attrs -> attrs -> listOf path
+  # Each axis value is a string or a list of strings. Unknown values are
+  # silently skipped (so hosts can reference optional profiles safely).
   resolveProfiles = profiles: hostProfiles:
-    concatLists (mapAttrsToList
-      (k: v:
-        if v == null then
-          [ ]
-        else
-          optional (profiles ? "${k}.${v}") profiles."${k}.${v}"
-      )
-      hostProfiles);
+    concatMap
+      (k: map (val: profiles."${k}.${val}")
+              (filter (val: profiles ? "${k}.${val}") (toList hostProfiles.${k})))
+      (attrNames hostProfiles);
 
   mkHostModules =
     { host

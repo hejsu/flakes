@@ -4,10 +4,19 @@
   profiles = {
     user = "suspen";
     role = "server";
+    network = [ "ts0" ];
   };
 
   modules = {
-    xdg.enable = true;
+    sops = {
+      enable = true;
+      ageKeyFile = "/var/lib/sops-nix/key.txt";
+
+      secrets.tsAuthKey = {
+        owner = "suspen";
+        group = "users";
+      };
+    };
 
     shell = {
       fish.enable = true;
@@ -16,24 +25,17 @@
       git.enable = true;
     };
 
-    sops = {
-      enable = true;
-      ageKeyFile = "/var/lib/sops-nix/key.txt";
-
-      secrets.tsAuthKey = { 
-        owner = "suspen"; 
-        group = "users"; 
-      };
+    dev = {
+      nix.enable = true;
     };
 
     services = {
-      cliproxyapi.enable = false;
+      ssh.enable = true;
     };
   };
 
-
   ## Local config
-  settings = { ss, pkgs, config, ... }: {
+  settings = { config, ... }: {
     nix.optimise.automatic = true;
     nix.settings = {
       experimental-features = [ "nix-command" "flakes" ];
@@ -55,42 +57,26 @@
 
     networking.domain = "t0tivnfifftexijyidewzlguwg.lx.internal.cloudapp.net";
 
-    services.openssh = {
-      enable = true;
-      settings = {
-        PasswordAuthentication = false;
-        KbdInteractiveAuthentication = false;
-        ClientAliveInterval = 180;
-      };
-    };
-
-    users.users.root.openssh.authorizedKeys.keys = [
-      ss.keys.ss0
-    ];
-
     user = {
-      openssh.authorizedKeys.keys = [ ss.keys.ss0 ];
       initialHashedPassword = "$6$A/Ms/0m62sATO5ge$8dAjphC5IF5bKOa8W2/MEsVgW8HaL1lRZBeUi3ZO8hk1lkuU25HQVQ5m8zQobvtJZAk3NPRjeJq3zh7EQEdML0";
-
-      # Daily driver shell. root stays on bash on purpose (rescue/logins).
-      shell = pkgs.fish;
     };
 
     services.journald.settings.Journal.SystemMaxUse = "200M";
 
-    services.tailscale = {
-      enable = true;
-      authKeyFile = config.sops.secrets.tsAuthKey.path;  
-      extraUpFlags = [ "--ssh" ];
-      openFirewall = true;
-    };
+    # Machine-specific: the auth key comes from sops. Everything else about
+    # tailscale lives in the network profile.
+    services.tailscale.authKeyFile = config.sops.secrets.tsAuthKey.path;
 
     system.stateVersion = "23.11";
   };
 
   hardware = { ... }: {
     virtualisation.hypervGuest.enable = true;
-    zramSwap.enable = true;
+    zramSwap = {
+      enable = true;
+      memoryPercent = 150;
+      priority = 100; 
+    };
 
     boot = {
       tmp.cleanOnBoot = true;

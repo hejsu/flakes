@@ -11,8 +11,6 @@
   };
 
   modules = {
-    xdg.enable = true;
-
     shell = {
       fish.enable = true;
       git.enable = true;
@@ -39,8 +37,13 @@
     };
   };
 
-  settings = { ss, lib, config, ... }: {
+  settings = { ss, lib, config, pkgs, ... }: {
     system.stateVersion = 6;
+
+    user.packages = with pkgs; [
+      dash
+      opencode
+    ];
 
     home.sessionVariables = {
       SSH_AUTH_SOCK = "${config.home.dir}/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh";

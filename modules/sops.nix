@@ -1,4 +1,4 @@
-{ ss, config, lib, options, ... }:
+{ ss, config, lib, pkgs, options, ... }:
 
 let cfg = config.modules.sops; in {
   imports = [
@@ -42,6 +42,9 @@ let cfg = config.modules.sops; in {
         message = "modules.sops: defaultSopsFile (${toString cfg.defaultSopsFile}) does not exist. Expected hosts/${config.networking.hostName}/assets/secrets.yaml.";
       }
     ];
+
+    # CLI for editing/decrypting on the box.
+    environment.systemPackages = [ pkgs.sops pkgs.age ];
 
     sops = {
       inherit (cfg) defaultSopsFile;

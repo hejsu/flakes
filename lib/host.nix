@@ -15,9 +15,13 @@ rec {
       };
 
       profiles = mkOption {
-        type = types.attrsOf (types.nullOr types.str);
+        type = types.attrsOf (types.either types.str (types.listOf types.str));
         default = { };
-        description = "Profile selectors matching profiles/<key>/<val>.nix";
+        description = ''
+          Profile selectors matching profiles/<key>/<value>.nix.
+          A value may be a single string or a list of strings (each resolved).
+          Omit an axis entirely to select nothing for it.
+        '';
       };
 
       includes = mkOption {
