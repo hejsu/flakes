@@ -11,13 +11,6 @@
   };
 
   modules = {
-    shell = {
-      fish.enable = true;
-      git.enable = true;
-      nvim.enable = true;
-      yazi.enable = true;
-    };
-
     sops = {
       enable = true;
       secrets.hello = {
@@ -26,8 +19,14 @@
       };
     };
 
+    shell = {
+      fish.enable = true;
+      git.enable = true;
+      nvim.enable = true;
+      yazi.enable = true;
+    };
+
     dev = {
-      cc.enable = true;
       typst.enable = true;
       python.enable = true;
     };

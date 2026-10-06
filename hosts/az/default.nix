@@ -25,10 +25,6 @@
       git.enable = true;
     };
 
-    dev = {
-      nix.enable = true;
-    };
-
     services = {
       ssh.enable = true;
     };
@@ -41,6 +37,16 @@
     };
 
     system.stateVersion = "23.11";
+
+    nix.settings = {
+      substituters = [
+        "https://cache.nixos.org"
+        "https://nix-community.cachix.org"
+      ];
+      trusted-public-keys = [
+        "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      ];
+    };
   };
 
   hardware = { ... }: {
@@ -48,7 +54,7 @@
     zramSwap = {
       enable = true;
       memoryPercent = 150;
-      priority = 100; 
+      priority = 100;
     };
 
     boot = {
@@ -76,10 +82,10 @@
       fsType = "ext4";
     };
 
-    swapDevices = [ { 
-      device = "/swapfile"; 
-      size = 8192; 
-      discardPolicy = "once"; 
-    } ];
+    swapDevices = [{
+      device = "/swapfile";
+      size = 8192;
+      discardPolicy = "once";
+    }];
   };
 }

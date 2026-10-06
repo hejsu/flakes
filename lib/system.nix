@@ -9,7 +9,7 @@ rec {
   resolveProfiles = profiles: hostProfiles:
     concatMap
       (k: map (val: profiles."${k}.${val}")
-              (filter (val: profiles ? "${k}.${val}") (toList hostProfiles.${k})))
+        (filter (val: profiles ? "${k}.${val}") (toList hostProfiles.${k})))
       (attrNames hostProfiles);
 
   mkHostModules =

@@ -1,23 +1,11 @@
+# CLIProxyAPI -- darwin backend (launchd user agent).
+#
+# The switch and `configFile` come from the shared module in
+# modules/services/cliproxyapi.nix; its systemd half is dropped here by
+# modules/_darwin/parity.nix.
 { config, lib, pkgs, ... }:
 
-let cfg = config.services.cliproxyapi; in {
-  options.services.cliproxyapi = {
-    enable = lib.mkEnableOption "CLIProxyAPI user service (launchd)";
-
-    package = lib.mkOption {
-      type = lib.types.package;
-      default = pkgs.cliproxyapi;
-      description = "CLIProxyAPI package to run.";
-    };
-
-    configFile = lib.mkOption {
-      type = lib.types.either lib.types.path lib.types.str;
-      default = "${config.home.configDir}/cli-proxy-api/config.yaml";
-      example = "/Users/alice/.config/cli-proxy-api/config.yaml";
-      description = "Path to the CLIProxyAPI config file.";
-    };
-  };
-
+let cfg = config.modules.services.cliproxyapi; in {
   config = lib.mkIf cfg.enable {
     system.activationScripts.cliproxyapi.text = ''
       sudo -u ${config.user.name} mkdir -p "${config.home.configDir}/cli-proxy-api" "${config.home.stateDir}/cliproxyapi/static" "${config.home.dir}/Library/Logs/cliproxyapi"
@@ -28,9 +16,9 @@ let cfg = config.services.cliproxyapi; in {
 
       serviceConfig = {
         ProgramArguments = [
-          (lib.getExe cfg.package)
+          (lib.getExe pkgs.cliproxyapi)
           "-config"
-          (toString cfg.configFile)
+          "${cfg.configFile}"
         ];
         RunAtLoad = true;
         KeepAlive = true;

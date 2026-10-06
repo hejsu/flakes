@@ -1,4 +1,4 @@
-{ lib, options, config, pkgs, ... }:
+{ lib, options, config, ... }:
 
 {
   options = {
@@ -19,13 +19,6 @@
     }];
 
     user = {
-      home = lib.mkDefault (
-        if pkgs.stdenv.hostPlatform.isDarwin then
-          "/Users/${config.user.name}"
-        else
-          "/home/${config.user.name}"
-      );
-    } // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
       isNormalUser = true;
       group = "users";
       extraGroups = [ "wheel" ];

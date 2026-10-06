@@ -176,5 +176,5 @@ function ss_deploy_az --description "Sync dotfiles to az and rebuild there"
     rsync -az --delete \
         --exclude .git --exclude .cache --exclude .direnv --exclude 'result*' \
         "$NH_FLAKE/" "$host:$dir/"
-    and ssh -t $host "sudo nixos-rebuild switch --flake $dir#az"
+    and ssh -t $host "nh os switch -H az"
 end
