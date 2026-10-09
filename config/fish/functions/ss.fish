@@ -29,8 +29,8 @@ function ss --description "Helper for managing dotfiles"
             ss_repl $argv
         case path
             ss_path $argv
-        case az
-            ss_deploy_az
+        case deploy
+            ss_deploy $argv
         case help -h --help
             ss_help
         case "*"
@@ -52,7 +52,7 @@ function ss_help --description "Show ss usage"
     echo "  gens                                 List system generations"
     echo "  repl [args]                          Open a nix repl with the flake preloaded"
     echo "  path [area] [segments...]            Print a path inside the repo"
-    echo "  az                                   Sync the repo to az and rebuild there"
+    echo "  deploy <host...>                     Sync dotfiles to remote host(s) and rebuild"
     echo "  help, -h, --help                     Show this help"
     echo
     echo "Anything else is passed through to nh."
@@ -170,11 +170,31 @@ function ss_path --description "Print a path inside the dotfiles repo"
     end
 end
 
-function ss_deploy_az --description "Sync dotfiles to az and rebuild there"
-    set -l host az
-    set -l dir /home/suspen/.config/dotfiles
-    rsync -az --delete \
-        --exclude .git --exclude .cache --exclude .direnv --exclude 'result*' \
-        "$NH_FLAKE/" "$host:$dir/"
-    and ssh -t $host "nh os switch -H az"
+function ss_deploy --description "Sync dotfiles to remote host(s) and rebuild"
+    if test (count $argv) -eq 0
+        echo "Usage: ss deploy <host...>" >&2
+        return 1
+    end
+
+    set -l flakeHome "$NH_FLAKE"
+    if test -z "$flakeHome"
+        set flakeHome "$HOME/.config/dotfiles"
+    end
+
+    set -l dir "/home/suspen/.config/dotfiles"
+
+    for host in $argv
+        set host (string trim $host)
+        test -z "$host"; and continue
+
+        echo "==> Deploying to $host..."
+        rsync -az --delete \
+            --exclude .git --exclude .cache --exclude .direnv --exclude 'result*' \
+            "$flakeHome/" "$host:$dir/"
+        and ssh -t $host "test -d '$dir/.git' && git -C '$dir' add -A 2>/dev/null; nh os switch -H $host"
+        or begin
+            echo "==> Deploy to $host failed!" >&2
+            return 1
+        end
+    end
 end

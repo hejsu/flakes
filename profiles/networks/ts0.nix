@@ -4,6 +4,6 @@
     enable = true;
     useRoutingFeatures = "none";
     openFirewall = true;
-    authKeyFile = config.sops.secrets.tsAuthKey.path;
+    # authKeyFile = config.sops.secrets.tsAuthKey.path;
   };
 }

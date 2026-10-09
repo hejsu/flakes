@@ -1,4 +1,4 @@
 [mgr]
 prepend_keymap = [
-  { on = "d",  run = "shell -- trash %s", desc = "Trash selected files" },
+  # { on = "d",  run = "shell -- trash %s", desc = "Trash selected files" },
 ]

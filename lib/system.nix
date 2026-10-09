@@ -4,12 +4,23 @@ with builtins;
 with lib;
 rec {
   # resolveProfiles :: attrs -> attrs -> listOf path
-  # Each axis value is a string or a list of strings. Unknown values are
-  # silently skipped (so hosts can reference optional profiles safely).
+  # Resolves profile selectors into module paths. Unknown profiles fail fast with an informative error.
   resolveProfiles = profiles: hostProfiles:
     concatMap
-      (k: map (val: profiles."${k}.${val}")
-        (filter (val: profiles ? "${k}.${val}") (toList hostProfiles.${k})))
+      (k:
+        let
+          vals = filter (v: v != null && v != "") (toList hostProfiles.${k});
+        in
+        map
+          (val:
+            let key = "${k}.${val}"; in
+            profiles.${key} or (throw ''
+
+              [Dotfiles Error] Unknown profile '${key}' referenced in host configuration!
+              Available profiles:
+                ${concatStringsSep "\n  " (map (n: "- " + n) (attrNames profiles))}
+            ''))
+          vals)
       (attrNames hostProfiles);
 
   mkHostModules =

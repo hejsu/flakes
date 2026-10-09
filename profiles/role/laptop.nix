@@ -23,7 +23,7 @@
     warn-dirty = false
     use-xdg-base-directories = true
     trusted-users = ${config.user.name} root
-    substituters = https://mirrors.ustc.edu.cn/nix-channels/store https://cache.nixos.org
+    substituters = https://mirrors.cernet.edu.cn/nix-channels/store https://cache.nixos.org
     http-connections = 50
     max-substitution-jobs = 32
   '';
@@ -51,14 +51,17 @@
   homebrew = {
     enable = true;
     enableFishIntegration = true;
-    onActivation.cleanup = "zap";
-
-    onActivation.extraEnv = {
-      XDG_CONFIG_HOME = "${config.home.configDir}";
-      HOMEBREW_API_DOMAIN = "https://mirrors.tuna.tsinghua.edu.cn/homebrew-bottles/api";
-      HOMEBREW_BREW_GIT_REMOTE = "https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/brew.git";
-      HOMEBREW_CORE_GIT_REMOTE = "https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/homebrew-core.git";
-      HOMEBREW_PIP_INDEX_URL = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple";
+    onActivation = {
+      autoUpdate = false;
+      upgrade = false;
+      cleanup = "none";
+      extraEnv = {
+        XDG_CONFIG_HOME = "${config.home.configDir}";
+        HOMEBREW_API_DOMAIN = "https://mirrors.tuna.tsinghua.edu.cn/homebrew-bottles/api";
+        HOMEBREW_BREW_GIT_REMOTE = "https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/brew.git";
+        HOMEBREW_CORE_GIT_REMOTE = "https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/homebrew-core.git";
+        HOMEBREW_PIP_INDEX_URL = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple";
+      };
     };
   };
 }

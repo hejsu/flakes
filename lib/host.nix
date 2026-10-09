@@ -15,13 +15,21 @@ rec {
       };
 
       profiles = mkOption {
-        type = types.attrsOf (types.either types.str (types.listOf types.str));
+        type = types.submodule {
+          options =
+            let opt = desc: mkOption {
+              type = with types; nullOr (either str (listOf str));
+              default = null;
+              description = desc;
+            }; in {
+              user = opt "User identity profile (profiles/user/<name>.nix)";
+              role = opt "System role profile (profiles/role/<name>.nix)";
+              networks = opt "Network profiles (profiles/networks/<name>.nix)";
+              hardware = opt "Hardware profiles (profiles/hardware/<name>.nix)";
+            };
+        };
         default = { };
-        description = ''
-          Profile selectors matching profiles/<key>/<value>.nix.
-          A value may be a single string or a list of strings (each resolved).
-          Omit an axis entirely to select nothing for it.
-        '';
+        description = "Profile selectors matching profiles/<axis>/<name>.nix";
       };
 
       includes = mkOption {

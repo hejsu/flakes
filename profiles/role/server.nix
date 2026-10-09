@@ -2,18 +2,17 @@
 #
 # Baseline preset for headless / server environments across macOS & Linux.
 { lib, ... }: {
-  #### Housekeeping
   # Weekly nix GC
   nix.gc = {
     automatic = true;
     dates = "weekly";
-    options = "--delete-older-than 14d";
+    options = "--delete-older-than 7d";
   };
 
   # Weekly TRIM (SSD/VPS-friendly)
   services.fstrim.enable = true;
 
-  #### Power
+  # Power
   powerManagement.cpuFreqGovernor = lib.mkDefault "ondemand";
 
   services.journald.settings.Journal = {
@@ -24,7 +23,6 @@
   nix.optimise.automatic = true;
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
-
     auto-optimise-store = true;
   };
 }

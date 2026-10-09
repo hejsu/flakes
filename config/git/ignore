@@ -60,3 +60,7 @@ _build/
 
 # Local OPAM switch
 _opam/
+
+# Direnv
+.direnv/
+.envrc.cache

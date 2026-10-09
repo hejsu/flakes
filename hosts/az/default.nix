@@ -4,7 +4,7 @@
   profiles = {
     user = "suspen";
     role = "server";
-    network = [ "ts0" ];
+    networks = [ "ts0" ];
   };
 
   modules = {
@@ -12,10 +12,10 @@
       enable = true;
       ageKeyFile = "/var/lib/sops-nix/key.txt";
 
-      secrets.tsAuthKey = {
-        owner = "suspen";
-        group = "users";
-      };
+      # secrets.tsAuthKey = {
+      #   owner = "suspen";
+      #   group = "users";
+      # };
     };
 
     shell = {
@@ -23,6 +23,7 @@
       nvim.enable = true;
       yazi.enable = true;
       git.enable = true;
+      direnv.enable = true;
     };
 
     services = {

@@ -4,6 +4,7 @@
   profiles = {
     user = "suspen";
     role = "server";
+    networks = [ "ts0" ];
   };
 
   modules = {
@@ -16,6 +17,7 @@
       nvim.enable = true;
       yazi.enable = true;
       git.enable = true;
+      direnv.enable = true;
     };
   };
 

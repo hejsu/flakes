@@ -24,6 +24,7 @@
       git.enable = true;
       nvim.enable = true;
       yazi.enable = true;
+      direnv.enable = true;
     };
 
     dev = {
