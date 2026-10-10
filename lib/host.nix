@@ -17,11 +17,14 @@ rec {
       profiles = mkOption {
         type = types.submodule {
           options =
-            let opt = desc: mkOption {
-              type = with types; nullOr (either str (listOf str));
-              default = null;
-              description = desc;
-            }; in {
+            let
+              opt = desc: mkOption {
+                type = with types; nullOr (either str (listOf str));
+                default = null;
+                description = desc;
+              };
+            in
+            {
               user = opt "User identity profile (profiles/user/<name>.nix)";
               role = opt "System role profile (profiles/role/<name>.nix)";
               networks = opt "Network profiles (profiles/networks/<name>.nix)";

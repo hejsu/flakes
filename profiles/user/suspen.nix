@@ -1,10 +1,10 @@
 # profiles/user/suspen -- identity & access for this user
-{ ss, pkgs, ... }: {
+{ ss, pkgs, lib, ... }: {
   user.name = "suspen";
 
   home.impure.enable = true;
 
-  time.timeZone = "Asia/Shanghai";
+  time.timeZone = lib.mkDefault "Asia/Shanghai";
 
   user.shell = pkgs.fish;
 

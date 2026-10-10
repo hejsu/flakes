@@ -14,7 +14,7 @@ rec {
         map
           (val:
             let key = "${k}.${val}"; in
-            profiles.${key} or (throw ''
+              profiles.${key} or (throw ''
 
               [Dotfiles Error] Unknown profile '${key}' referenced in host configuration!
               Available profiles:

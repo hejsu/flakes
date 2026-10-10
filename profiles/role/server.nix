@@ -22,8 +22,10 @@
 
   nix.optimise.automatic = true;
   nix.settings = {
+    warn-dirty = false;
+    use-xdg-base-directories = true;
+    trusted-users = [ "suspen" "root" ];
     experimental-features = [ "nix-command" "flakes" ];
-    auto-optimise-store = true;
   };
 }
 

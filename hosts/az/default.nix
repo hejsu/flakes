@@ -4,18 +4,13 @@
   profiles = {
     user = "suspen";
     role = "server";
-    networks = [ "ts0" ];
+    networks = [ "tyo" "ts0" ];
   };
 
   modules = {
     sops = {
       enable = true;
       ageKeyFile = "/var/lib/sops-nix/key.txt";
-
-      # secrets.tsAuthKey = {
-      #   owner = "suspen";
-      #   group = "users";
-      # };
     };
 
     shell = {
@@ -23,7 +18,6 @@
       nvim.enable = true;
       yazi.enable = true;
       git.enable = true;
-      direnv.enable = true;
     };
 
     services = {
@@ -37,17 +31,24 @@
       initialHashedPassword = "$6$A/Ms/0m62sATO5ge$8dAjphC5IF5bKOa8W2/MEsVgW8HaL1lRZBeUi3ZO8hk1lkuU25HQVQ5m8zQobvtJZAk3NPRjeJq3zh7EQEdML0";
     };
 
+    networking = {
+      useDHCP = true;
+      enableIPv6 = true;
+      dhcpcd = {
+        enable = true;
+        IPv6rs = true;
+        allowInterfaces = [ "eth0" ];
+        wait = "both";
+      };
+
+      firewall = {
+        enable = true;
+        allowedTCPPorts = [ 22 80 443 ];
+      };
+    };
+
     system.stateVersion = "23.11";
 
-    nix.settings = {
-      substituters = [
-        "https://cache.nixos.org"
-        "https://nix-community.cachix.org"
-      ];
-      trusted-public-keys = [
-        "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-      ];
-    };
   };
 
   hardware = { ... }: {

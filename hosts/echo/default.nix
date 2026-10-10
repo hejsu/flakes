@@ -4,7 +4,7 @@
   profiles = {
     user = "suspen";
     role = "server";
-    networks = [ "ts0" ];
+    networks = [ "pek" "ts0" ];
   };
 
   modules = {
@@ -13,11 +13,11 @@
     };
 
     shell = {
+      direnv.enable = true;
+      git.enable = true;
       fish.enable = true;
       nvim.enable = true;
       yazi.enable = true;
-      git.enable = true;
-      direnv.enable = true;
     };
   };
 
@@ -26,20 +26,25 @@
       initialHashedPassword = "$6$8fKq2Zr9PmLxWvTy$o6W7AAu2IewTITRyufOT8R6i4WqeQxJLs.PZFUEHagBuOdxlAPhktx0OsLj.splluOmMsMmim0cGNjHrabxOW.";
     };
 
-    system.stateVersion = "26.11";
-
-    networking.networkmanager.enable = true;
-
-    nix.settings = {
-      substituters = [
-        "https://mirrors.cernet.edu.cn/nix-channels/store"
-        "https://mirrors.ustc.edu.cn/nix-channels/store"
-        "https://nix-community.cachix.org"
-      ];
-      trusted-public-keys = [
-        "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-      ];
+    networking = {
+      useNetworkd = true;
+      useDHCP = false;
     };
+
+    systemd.network = {
+      enable = true;
+      wait-online.enable = false;
+    };
+
+    systemd.network.networks."10-eth0" = {
+      matchConfig.Name = "eth0";
+      networkConfig = {
+        DHCP = "yes";
+        IPv6PrivacyExtensions = "kernel";
+      };
+    };
+
+    system.stateVersion = "26.11";
   };
 
   hardware = { ... }: {
