@@ -1,6 +1,9 @@
 gui:
+  nerdFontsVersion: "3"
   theme:
     selectedLineBgColor:
       - black
 git:
   autoFetch: false
+os:
+  editPreset: "nvim"

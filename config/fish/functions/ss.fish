@@ -31,6 +31,8 @@ function ss --description "Helper for managing dotfiles"
             ss_path $argv
         case deploy
             ss_deploy $argv
+        case az echo
+            ss_deploy $cmd $argv
         case help -h --help
             ss_help
         case "*"
@@ -112,7 +114,11 @@ end
 
 function ss_unswap --description "Restore store symlinks by re-running the hjem agent"
     echo "Re-linking hjem files to the store (local swapped copies will be replaced)..."
-    launchctl kickstart -k gui/(id -u)/org.hjem.activate
+    if test (uname -s) = Darwin
+        launchctl kickstart -k gui/(id -u)/org.hjem.activate
+    else
+        systemctl --user restart org.hjem.activate
+    end
 end
 
 function ss_gc --description "Clean profiles and optimise the store"

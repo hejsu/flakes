@@ -9,12 +9,10 @@
 {
   "agent": {
     "default_profile": "ask",
-    "model_parameters": [],
     "default_model": {
       "provider": "deepseek",
       "model": "deepseek-reasoner"
-    },
-    "version": "2"
+    }
   },
   "languages": {
     "Nix": {
@@ -33,8 +31,6 @@
   },
 
   "git": {
-    "git_gutter": null,
-    "gutter_debounce": null,
     "inline_blame": {
       "enabled": false
     }

@@ -8,19 +8,16 @@ rec {
   resolveProfiles = profiles: hostProfiles:
     concatMap
       (k:
-        let
-          vals = filter (v: v != null && v != "") (toList hostProfiles.${k});
-        in
-        map
-          (val:
-            let key = "${k}.${val}"; in
-              profiles.${key} or (throw ''
+        let vals = filter (v: v != null && v != "") (toList hostProfiles.${k}); in
+        map (val:
+          let key = "${k}.${val}"; in
+            profiles.${key} or (throw ''
 
-              [Dotfiles Error] Unknown profile '${key}' referenced in host configuration!
-              Available profiles:
-                ${concatStringsSep "\n  " (map (n: "- " + n) (attrNames profiles))}
-            ''))
-          vals)
+            [Dotfiles Error] Unknown profile '${key}' referenced in host configuration!
+            Available profiles:
+              ${concatStringsSep "\n  " (map (n: "- " + n) (attrNames profiles))}
+          ''))
+        vals)
       (attrNames hostProfiles);
 
   mkHostModules =
@@ -59,7 +56,6 @@ rec {
 
       autoModules = modules;
 
-      # 全局架构单例 Nixpkgs 缓存（大幅降低重复求值开销）
       mkPkgs = system: import nixpkgs {
         inherit system;
         overlays = overlayList;
@@ -69,7 +65,6 @@ rec {
       pkgsFor = system:
         pkgsBySystem.${system} or (throw "Host system '${system}' is not in the supported 'systems' list in flake.nix: ${toJSON systems}");
 
-      # 上下文生成器
       mkSS = platformKey: {
         modules = mapAttrs (_: i: i.${platformKey} or { }) inputs;
         sourceDir = self;
@@ -77,7 +72,6 @@ rec {
         keys = import ./keys.nix;
       };
 
-      # 通用系统架构嗅探器：通过反射函数形参动态补全占位符，微秒级惰性直读 system
       getSystem = path:
         let fn = import path; in
         (if isFunction fn then fn (mapAttrs (_: _: { }) (functionArgs fn)) else fn).system;
@@ -88,6 +82,7 @@ rec {
           moduleKey = "darwinModules";
           match = s: hasSuffix "-darwin" s;
           extraModules = [
+            ../modules/_darwin
             { _module.freeformType = lib.types.attrsOf lib.types.anything; }
           ];
         };

@@ -1,10 +1,6 @@
-import json
-import subprocess
-from collections import defaultdict
 from datetime import datetime, timezone
 
-from kitty.boss import get_boss
-from kitty.fast_data_types import Screen, add_timer
+from kitty.fast_data_types import Screen
 from kitty.rgb import Color
 from kitty.tab_bar import (
     DrawData,
@@ -17,28 +13,13 @@ from kitty.tab_bar import (
 )
 from kitty.utils import color_as_int
 
-timer_id = None
-
 ICON = "  "
 RIGHT_MARGIN = 1
-REFRESH_TIME = 15
 
 icon_fg = as_rgb(color_as_int(Color(255, 250, 205)))
 icon_bg = as_rgb(color_as_int(Color(47, 61, 68)))
-bat_text_color = as_rgb(0x999F93)
 clock_color = as_rgb(0x7FBBB3)
-dnd_color = as_rgb(0x465258)
-sep_color = as_rgb(0x999F93)
 utc_color = as_rgb(color_as_int(Color(113, 115, 116)))
-
-
-def calc_draw_spaces(*args) -> int:
-    length = 0
-    for i in args:
-        if not isinstance(i, str):
-            i = str(i)
-        length += len(i)
-    return length
 
 
 def _draw_icon(screen: Screen, index: int) -> int:
@@ -140,7 +121,6 @@ def draw_tab(
 
     # Draw the right status only for the last tab, without creating a new tab
     if is_last:
-        screen.cursor.x = screen.columns - RIGHT_MARGIN
         _draw_right_status(screen)
 
     return end

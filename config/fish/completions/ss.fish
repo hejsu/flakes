@@ -17,6 +17,7 @@ complete -c ss -n "__fish_use_subcommand" -a gens -d "List system generations"
 complete -c ss -n "__fish_use_subcommand" -a repl -d "Open a nix repl"
 complete -c ss -n "__fish_use_subcommand" -a path -d "Print a path inside the repo"
 complete -c ss -n "__fish_use_subcommand" -a az -d "Alias for 'ss deploy az'"
+complete -c ss -n "__fish_use_subcommand" -a echo -d "Alias for 'ss deploy echo'"
 complete -c ss -n "__fish_use_subcommand" -a help -d "Show usage help"
 
 # Subcommand: sync

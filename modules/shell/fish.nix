@@ -37,7 +37,6 @@ let cfg = config.modules.shell.fish; in {
       NH_FLAKE = config.home.flakeDir;
     };
 
-    # System-level fish enabling
     programs.fish.enable = true;
 
     home.configFile = {
@@ -74,13 +73,25 @@ let cfg = config.modules.shell.fish; in {
       "fish/themes".source = "${ss.configDir}/fish/themes";
     };
 
+    programs.zoxide = {
+      enable = true;
+      excludeDirs = [
+        "/tmp"
+        "/var"
+        "/proc"
+        "/sys"
+        "node_modules"
+        "dist"
+        "build"
+      ];
+    };
+
     user.packages = with pkgs; [
       # CLI core & tools
       coreutils
       fzf
       ripgrep
       tree
-      zoxide
       less
       htop
       unzip

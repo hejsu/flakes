@@ -3,3 +3,13 @@
   name  = suspen
 [init]
   defaultBranch = main
+[pull]
+  rebase = true
+[push]
+  autoSetupRemote = true
+[diff]
+  algorithm = histogram
+[merge]
+  conflictStyle = zdiff3
+[rebase]
+  autoStash = true

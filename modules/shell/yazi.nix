@@ -13,7 +13,5 @@ let cfg = config.modules.shell.yazi; in {
     };
 
     home.configFile."yazi".source = "${ss.configDir}/yazi";
-
-    modules.shell.fish.interactiveFiles = [ "${ss.configDir}/yazi/y.fish" ];
   };
 }

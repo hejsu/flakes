@@ -45,6 +45,7 @@
       AppleICUForce24HourTime = true;
       AppleInterfaceStyle = "Dark";
       KeyRepeat = 2;
+      InitialKeyRepeat = 15;
     };
   };
 
