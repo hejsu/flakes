@@ -45,24 +45,27 @@
       AppleICUForce24HourTime = true;
       AppleInterfaceStyle = "Dark";
       KeyRepeat = 2;
-      InitialKeyRepeat = 15;
+      # InitialKeyRepeat = 15;
     };
   };
+
+  environment.etc."homebrew/brew.env".text = ''
+    HOMEBREW_SYSTEM_ENV_TAKES_PRIORITY=1
+    HOMEBREW_API_DOMAIN=https://mirrors.cernet.edu.cn/homebrew-bottles/api
+    HOMEBREW_BOTTLE_DOMAIN=https://mirrors.cernet.edu.cn/homebrew-bottles
+    HOMEBREW_BREW_GIT_REMOTE=https://mirrors.cernet.edu.cn/homebrew/brew.git
+    HOMEBREW_CORE_GIT_REMOTE=https://mirrors.cernet.edu.cn/homebrew/homebrew-core.git
+    HOMEBREW_PIP_INDEX_URL=https://mirrors.cernet.edu.cn/pypi/web/simple
+  '';
 
   homebrew = {
     enable = true;
     enableFishIntegration = true;
     onActivation = {
+      extraFlags = [ "--verbose" ];
       autoUpdate = false;
       upgrade = false;
       cleanup = "none";
-      extraEnv = {
-        XDG_CONFIG_HOME = "${config.home.configDir}";
-        HOMEBREW_API_DOMAIN = "https://mirrors.tuna.tsinghua.edu.cn/homebrew-bottles/api";
-        HOMEBREW_BREW_GIT_REMOTE = "https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/brew.git";
-        HOMEBREW_CORE_GIT_REMOTE = "https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/homebrew-core.git";
-        HOMEBREW_PIP_INDEX_URL = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple";
-      };
     };
   };
 }

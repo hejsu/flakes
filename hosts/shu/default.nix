@@ -25,7 +25,7 @@
 
     services = {
       cliproxyapi.enable = true;
-      ucasrun.enable = true;
+      ucasrun.enable = true; # set through Shortcuts
     };
   };
 
@@ -51,8 +51,7 @@
 
     user.packages = with pkgs; [
       dash
-      opencode
-      self.packages.bitsrun
+      self.packages.bitsrun # with shortcuts
     ];
 
     homebrew = {
@@ -60,6 +59,8 @@
         "docker"
         "docker-compose"
         "gcc"
+        
+        "opencode"
       ];
 
       casks = [
@@ -71,8 +72,8 @@
         "zotero"
         "tencent-meeting"
         "visual-studio-code"
-
         "secretive"
+
         "tailscale-app"
         "sfm"
 

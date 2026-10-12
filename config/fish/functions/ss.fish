@@ -80,6 +80,8 @@ function ss_sync --description "Rebuild this host: switch (default), build, roll
 end
 
 function ss_switch --description "nh switch for the local platform"
+    # Clean up dangling symlinks in user config before rebuild to prevent hjem activation failure on removed files
+    find ~/.config ~/.local/share -type l ! -exec test -e '{}' ';' -delete 2>/dev/null
     if test (uname -s) = Darwin
         set -l tmpdir (mktemp -d)
         pushd $tmpdir >/dev/null
@@ -197,7 +199,7 @@ function ss_deploy --description "Sync dotfiles to remote host(s) and rebuild"
         rsync -az --delete \
             --exclude .git --exclude .cache --exclude .direnv --exclude 'result*' \
             "$flakeHome/" "$host:$dir/"
-        and ssh -t $host "test -d '$dir/.git' && git -C '$dir' add -A 2>/dev/null; nh os switch -H $host"
+        and ssh -t $host "test -d '$dir/.git' && git -C '$dir' add -A 2>/dev/null; find ~/.config ~/.local/share -type l ! -exec test -e '{}' ';' -delete 2>/dev/null; nh os switch -H $host"
         or begin
             echo "==> Deploy to $host failed!" >&2
             return 1
