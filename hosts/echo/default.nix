@@ -17,7 +17,6 @@
       git.enable = true;
       fish.enable = true;
       nvim.enable = true;
-      yazi.enable = true;
     };
   };
 
@@ -30,6 +29,8 @@
       useNetworkd = true;
       useDHCP = false;
     };
+
+    programs.nix-ld.enable = true;
 
     systemd.network = {
       enable = true;

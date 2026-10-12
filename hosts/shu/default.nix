@@ -1,7 +1,6 @@
 {
   system = "aarch64-darwin";
 
-
   profiles = {
     user = "suspen";
     role = "laptop";
@@ -10,17 +9,12 @@
   modules = {
     sops = {
       enable = true;
-      secrets.hello = {
-        owner = "suspen";
-        group = "staff";
-      };
     };
 
     shell = {
       fish.enable = true;
       git.enable = true;
       nvim.enable = true;
-      yazi.enable = true;
       direnv.enable = true;
     };
 
@@ -31,6 +25,7 @@
 
     services = {
       cliproxyapi.enable = true;
+      ucasrun.enable = true;
     };
   };
 
@@ -57,6 +52,7 @@
     user.packages = with pkgs; [
       dash
       opencode
+      ss.packages.bitsrun
     ];
 
     homebrew = {

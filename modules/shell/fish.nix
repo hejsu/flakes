@@ -68,10 +68,13 @@ let cfg = config.modules.shell.fish; in {
 
       "fish/conf.d".source = "${ss.configDir}/fish/conf.d";
       "fish/functions".source = "${ss.configDir}/fish/functions";
-      "fish/fish_plugins".source = "${ss.configDir}/fish/fish_plugins";
       "fish/completions".source = "${ss.configDir}/fish/completions";
       "fish/themes".source = "${ss.configDir}/fish/themes";
+
+      "yazi".source = "${ss.configDir}/yazi";
     };
+
+    environment.shellAliases.yz = "yazi";
 
     programs.zoxide = {
       enable = true;
@@ -88,8 +91,10 @@ let cfg = config.modules.shell.fish; in {
 
     user.packages = with pkgs; [
       # CLI core & tools
+      kitty.terminfo
       coreutils
       fzf
+      yazi
       ripgrep
       tree
       less

@@ -16,7 +16,6 @@
     shell = {
       fish.enable = true;
       nvim.enable = true;
-      yazi.enable = true;
       git.enable = true;
     };
 

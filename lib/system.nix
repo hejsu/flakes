@@ -65,10 +65,13 @@ rec {
       pkgsFor = system:
         pkgsBySystem.${system} or (throw "Host system '${system}' is not in the supported 'systems' list in flake.nix: ${toJSON systems}");
 
-      mkSS = platformKey: {
+      mkSS = platformKey: system: {
         modules = mapAttrs (_: i: i.${platformKey} or { }) inputs;
         sourceDir = self;
         configDir = self + /config;
+        # This flake's own packages, for the host's system, so modules can
+        # reach them as `ss.packages.<name>` without threading `self` around.
+        packages = self.packages.${system};
         keys = import ./keys.nix;
       };
 
@@ -98,7 +101,7 @@ rec {
         let
           specialArgs = {
             inherit inputs self lib;
-            ss = mkSS platform.moduleKey;
+            ss = mkSS platform.moduleKey (getSystem hostPath);
           };
           host = evalHost {
             module = hostPath;
@@ -115,6 +118,16 @@ rec {
           };
         };
 
+      # callPackage 先行：平台过滤读的是构建出来的 derivation 上的 meta，
+      # 不是包函数本身。explicitArgs 由 callPackage 原样透传，所以每个包文件
+      # 都得声明 `self`（或写 `...`），哪怕自己用不到。
+      withPkgs = system: packageAttrs:
+        let pkgs = pkgsFor system; in
+        filterAttrs (_: v: !(v ? meta.platforms) || elem system v.meta.platforms)
+          (mapAttrs
+            (_: p: pkgs.callPackage p { self = self.packages.${system}; })
+            packageAttrs);
+
       mkConfigs = p: mapAttrs (buildHost p) (filterAttrs (_: path: p.match (getSystem path)) hosts);
       exportedModules = autoModules // { default = { imports = attrValues autoModules; }; };
     in
@@ -127,9 +140,7 @@ rec {
       darwinConfigurations = mkConfigs platforms.darwin;
       nixosConfigurations = mkConfigs platforms.nixos;
 
-      packages = genAttrs systems (system:
-        mapAttrs (_: p: (pkgsFor system).callPackage p { }) packages
-      );
+      packages = genAttrs systems (system: withPkgs system packages);
 
       formatter = genAttrs systems (system:
         (pkgsFor system).nixpkgs-fmt
