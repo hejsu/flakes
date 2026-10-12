@@ -20,6 +20,8 @@
     MaxRetentionSec = "21d";
   };
 
+  systemd.oomd.enableSystemSlice = true;
+
   nix.optimise.automatic = true;
   nix.settings = {
     warn-dirty = false;

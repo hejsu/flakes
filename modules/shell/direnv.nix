@@ -10,6 +10,9 @@ let cfg = config.modules.shell.direnv; in {
       enable = true;
       nix-direnv.enable = true;
       silent = true;
+      direnvrcExtra = ''
+        _nix_refresh_gcroots() { :; }
+      '';
     };
 
     nix.settings = {

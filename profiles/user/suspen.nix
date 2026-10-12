@@ -1,5 +1,5 @@
 # profiles/user/suspen -- identity & access for this user
-{ ss, pkgs, lib, ... }: {
+{ self, pkgs, lib, ... }: {
   user.name = "suspen";
 
   home.impure.enable = true;
@@ -8,8 +8,8 @@
 
   user.shell = pkgs.fish;
 
-  user.openssh.authorizedKeys.keys = [ ss.keys.ss0 ];
-  users.users.root.openssh.authorizedKeys.keys = [ ss.keys.ss0 ];
+  user.openssh.authorizedKeys.keys = [ self.keys.ss0 ];
+  users.users.root.openssh.authorizedKeys.keys = [ self.keys.ss0 ];
 }
 
 

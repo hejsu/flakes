@@ -1,5 +1,5 @@
 # UCAS（中国科学院大学）深澜（srun）校园网自动认证。
-{ ss, config, lib, ... }:
+{ self, config, lib, ... }:
 
 let cfg = config.modules.services.ucasrun; in {
   options.modules.services.ucasrun = {
@@ -68,7 +68,7 @@ let cfg = config.modules.services.ucasrun; in {
 
       serviceConfig = {
         User = config.user.name;
-        ExecStart = "${lib.getExe ss.packages.bitsrun} -config ${config.sops.templates."bitsrun-config.yaml".path}";
+        ExecStart = "${lib.getExe self.packages.bitsrun} -config ${config.sops.templates."bitsrun-config.yaml".path}";
         NoNewPrivileges = true;
         PrivateTmp = true;
       };

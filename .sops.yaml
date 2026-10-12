@@ -1,7 +1,13 @@
 keys:
   - &local age1alcjc6ee8lwlukf4ndqdcjct43ee5k2t6h4zsukxdkd7kph5fdrs9s95fe
   - &azure age183puvw68raq7twehq0gsz9c6hq0m8ze0sctt8mskj7ms2qhh33ls5feddg
+  - &echo  age15qxamscjw2j42dckh30wtawdx38tdektgdtnlhqtme2q32qe5v8q7nk0cx
 creation_rules:
+  - path_regex: hosts/echo/assets/.*
+    key_groups:
+    - age:
+      - *echo
+      - *local
   - path_regex: hosts/az/assets/.*
     key_groups:
     - age:
@@ -9,8 +15,5 @@ creation_rules:
       - *local
   - path_regex: hosts/[^/]+/assets/.*
     key_groups:
-    - age:
-      - *local
-  - key_groups:
     - age:
       - *local

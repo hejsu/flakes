@@ -1,9 +1,9 @@
-{ ss, lib, config, options, ... }:
+{ self, lib, config, options, ... }:
 
 with lib;
 let cfg = config.home; in {
   imports = [
-    ss.modules.hjem.default
+    self.modules.hjem.default
   ];
 
   options.home = with types; {

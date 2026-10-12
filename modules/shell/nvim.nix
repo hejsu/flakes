@@ -1,4 +1,4 @@
-{ ss, pkgs, lib, config, ... }:
+{ self, pkgs, lib, config, ... }:
 
 let cfg = config.modules.shell.nvim; in {
   options.modules.shell.nvim = {
@@ -20,6 +20,6 @@ let cfg = config.modules.shell.nvim; in {
       v = "nvim";
     };
 
-    home.configFile.nvim.source = "${ss.configDir}/nvim";
+    home.configFile.nvim.source = "${self.configDir}/nvim";
   };
 }

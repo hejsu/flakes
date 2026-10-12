@@ -8,8 +8,14 @@
   };
 
   modules = {
+    sops = {
+      enable = true;
+      ageKeyFile = "/var/lib/sops-nix/key.txt";
+    };
+
     services = {
       ssh.enable = true;
+      ucasrun.enable = true;
     };
 
     shell = {

@@ -1,4 +1,4 @@
-{ ss, pkgs, lib, config, ... }:
+{ self, pkgs, lib, config, ... }:
 let
   inherit (lib) mkIf mkOption types;
   inherit (lib) pipe filter hasPrefix removePrefix concatStringsSep;
@@ -104,7 +104,7 @@ in
 
     sourceDir = lib.mkOption {
       type = types.nullOr (types.either types.path types.str);
-      default = "${ss.sourceDir}";
+      default = "${self.sourceDir}";
       description = "Nix store immutable snapshot path to redirect away from";
     };
     targetDir = lib.mkOption {

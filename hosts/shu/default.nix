@@ -29,7 +29,7 @@
     };
   };
 
-  settings = { ss, lib, config, pkgs, ... }: {
+  settings = { self, lib, config, pkgs, ... }: {
     system.stateVersion = 6;
 
     home.sessionVariables = {
@@ -45,14 +45,14 @@
     };
 
     home.configFile = {
-      "kitty".source = "${ss.configDir}/kitty";
-      "zed/settings.json".source = "${ss.configDir}/zed/settings.json";
+      "kitty".source = "${self.configDir}/kitty";
+      "zed/settings.json".source = "${self.configDir}/zed/settings.json";
     };
 
     user.packages = with pkgs; [
       dash
       opencode
-      ss.packages.bitsrun
+      self.packages.bitsrun
     ];
 
     homebrew = {

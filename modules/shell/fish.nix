@@ -1,4 +1,4 @@
-{ ss, lib, config, pkgs, ... }:
+{ self, lib, config, pkgs, ... }:
 
 let cfg = config.modules.shell.fish; in {
   options.modules.shell.fish = with lib; with types; {
@@ -66,12 +66,12 @@ let cfg = config.modules.shell.fish; in {
         end
       '';
 
-      "fish/conf.d".source = "${ss.configDir}/fish/conf.d";
-      "fish/functions".source = "${ss.configDir}/fish/functions";
-      "fish/completions".source = "${ss.configDir}/fish/completions";
-      "fish/themes".source = "${ss.configDir}/fish/themes";
+      "fish/conf.d".source = "${self.configDir}/fish/conf.d";
+      "fish/functions".source = "${self.configDir}/fish/functions";
+      "fish/completions".source = "${self.configDir}/fish/completions";
+      "fish/themes".source = "${self.configDir}/fish/themes";
 
-      "yazi".source = "${ss.configDir}/yazi";
+      "yazi".source = "${self.configDir}/yazi";
     };
 
     environment.shellAliases.yz = "yazi";

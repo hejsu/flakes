@@ -1,4 +1,4 @@
-{ ss, lib, config, pkgs, ... }:
+{ self, lib, config, pkgs, ... }:
 
 let cfg = config.modules.shell.git; in {
   options.modules.shell.git = {
@@ -18,10 +18,10 @@ let cfg = config.modules.shell.git; in {
     };
 
     home.configFile = {
-      "git/config".source = "${ss.configDir}/git/config";
-      "git/ignore".source = "${ss.configDir}/git/ignore";
+      "git/config".source = "${self.configDir}/git/config";
+      "git/ignore".source = "${self.configDir}/git/ignore";
 
-      "lazygit/config.yml".source = "${ss.configDir}/lazygit/config.yml";
+      "lazygit/config.yml".source = "${self.configDir}/lazygit/config.yml";
     };
   };
 }

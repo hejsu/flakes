@@ -68,7 +68,7 @@ rec {
       inherit specialArgs;
     }).config;
 
-  # mapHosts 仅扫描并记录路径，推迟到 mkFlake 带着 ss 上下文完整求值
+  # mapHosts 仅扫描并记录路径，推迟到 mkFlake 带着 self 上下文完整求值
   mapHosts = dir:
     mapAttrs
       (hostName: _:

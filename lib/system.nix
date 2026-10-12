@@ -54,8 +54,6 @@ rec {
     let
       overlayList = attrValues overlays;
 
-      autoModules = modules;
-
       mkPkgs = system: import nixpkgs {
         inherit system;
         overlays = overlayList;
@@ -65,19 +63,30 @@ rec {
       pkgsFor = system:
         pkgsBySystem.${system} or (throw "Host system '${system}' is not in the supported 'systems' list in flake.nix: ${toJSON systems}");
 
-      mkSS = platformKey: system: {
-        modules = mapAttrs (_: i: i.${platformKey} or { }) inputs;
-        sourceDir = self;
-        configDir = self + /config;
-        # This flake's own packages, for the host's system, so modules can
-        # reach them as `ss.packages.<name>` without threading `self` around.
-        packages = self.packages.${system};
-        keys = import ./keys.nix;
-      };
+      # A flake as one system sees it: packages.${system}.foo -> packages.foo.
+      forSystem = system: flake:
+        flake // mapAttrs (_: v: v.${system} or { })
+          (filterAttrs (n: _: elem n [ "packages" "legacyPackages" "devShells" "apps" "checks" "formatter" ]) flake);
+
+      # The enriched `self` every module and host receives
+      mkSelf = platform: system: hostPath:
+        forSystem system self // {
+          inherit lib;
+          hostDir = dirOf hostPath;
+          sourceDir = self;
+          configDir = self + /config;
+          keys = import ./keys.nix;
+          # 递归将所有 inputs 按当前主机的 system 扁平化，模块可直接使用 self.inputs.<flake>.packages.<pkg>
+          inputs = mapAttrs (_: forSystem system) inputs;
+          # 提取外部 inputs 中当前平台对应的模块（darwinModules 或 nixosModules）
+          modules = mapAttrs (_: i: i.${platform.moduleKey} or { }) inputs;
+        };
 
       getSystem = path:
         let fn = import path; in
         (if isFunction fn then fn (mapAttrs (_: _: { }) (functionArgs fn)) else fn).system;
+
+      hostsWithSystem = mapAttrs (_: path: { inherit path; system = getSystem path; }) hosts;
 
       platforms = {
         darwin = {
@@ -97,24 +106,24 @@ rec {
         };
       };
 
-      buildHost = platform: hostName: hostPath:
+      buildHost = platform: hostName: { path, system }:
         let
+          self' = mkSelf platform system path;
           specialArgs = {
-            inherit inputs self lib;
-            ss = mkSS platform.moduleKey (getSystem hostPath);
+            inherit lib;
+            self = self';
           };
           host = evalHost {
-            module = hostPath;
+            module = path;
             inherit specialArgs;
           };
         in
         platform.builder {
-          inherit specialArgs;
-          system = host.system;
+          inherit specialArgs system;
           modules = mkHostModules {
             inherit host hostName profiles;
-            pkgs = pkgsFor host.system;
-            extraModules = (attrValues autoModules) ++ platform.extraModules;
+            pkgs = pkgsFor system;
+            extraModules = (attrValues modules) ++ platform.extraModules;
           };
         };
 
@@ -128,8 +137,11 @@ rec {
             (_: p: pkgs.callPackage p { self = self.packages.${system}; })
             packageAttrs);
 
-      mkConfigs = p: mapAttrs (buildHost p) (filterAttrs (_: path: p.match (getSystem path)) hosts);
-      exportedModules = autoModules // { default = { imports = attrValues autoModules; }; };
+      mkConfigs = p:
+        mapAttrs (buildHost p)
+          (filterAttrs (_: { system, ... }: p.match system) hostsWithSystem);
+
+      exportedModules = modules // { default = { imports = attrValues modules; }; };
     in
     {
       inherit lib overlays;
