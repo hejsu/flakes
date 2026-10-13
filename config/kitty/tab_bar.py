@@ -16,19 +16,18 @@ from kitty.utils import color_as_int
 ICON = "  "
 RIGHT_MARGIN = 1
 
-icon_fg = as_rgb(color_as_int(Color(255, 250, 205)))
-icon_bg = as_rgb(color_as_int(Color(47, 61, 68)))
-clock_color = as_rgb(0x7FBBB3)
-utc_color = as_rgb(color_as_int(Color(113, 115, 116)))
+icon_fg = as_rgb(color_as_int(Color(203, 166, 247)))
+icon_bg = as_rgb(color_as_int(Color(49, 50, 68)))
+clock_color = as_rgb(0x94E2D5)
+utc_color = as_rgb(color_as_int(Color(108, 112, 134)))
 
 
 def _draw_icon(screen: Screen, index: int) -> int:
     fg, bg = screen.cursor.fg, screen.cursor.bg
     screen.cursor.fg = icon_fg
-    screen.cursor.bg = icon_bg
+    screen.cursor.bg = 0
     screen.draw(ICON)
     screen.cursor.fg, screen.cursor.bg = fg, bg
-    screen.cursor.x += len(ICON)
     return screen.cursor.x
 
 
@@ -104,7 +103,7 @@ def draw_tab(
     extra_data: ExtraData,
 ) -> int:
     # Only draw the icon for the first tab
-    if index == 0:
+    if index == 1:
         _draw_icon(screen, index)
 
     # Draw the left status for each tab
