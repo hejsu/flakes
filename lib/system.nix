@@ -9,15 +9,16 @@ rec {
     concatMap
       (k:
         let vals = filter (v: v != null && v != "") (toList hostProfiles.${k}); in
-        map (val:
-          let key = "${k}.${val}"; in
-            profiles.${key} or (throw ''
+        map
+          (val:
+            let key = "${k}.${val}"; in
+              profiles.${key} or (throw ''
 
             [Dotfiles Error] Unknown profile '${key}' referenced in host configuration!
             Available profiles:
               ${concatStringsSep "\n  " (map (n: "- " + n) (attrNames profiles))}
           ''))
-        vals)
+          vals)
       (attrNames hostProfiles);
 
   mkHostModules =

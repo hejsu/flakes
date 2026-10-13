@@ -12,7 +12,8 @@ let
     restartUnits = unitsOption;
     reloadUnits = unitsOption;
   };
-in {
+in
+{
   options = {
     sops.templates = lib.mkOption {
       type = lib.types.attrsOf (lib.types.submodule { options = shim; });

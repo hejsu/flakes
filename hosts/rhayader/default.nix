@@ -63,7 +63,7 @@
         "docker"
         "docker-compose"
         "gcc"
-        
+
         "opencode"
       ];
 
