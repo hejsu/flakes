@@ -53,7 +53,9 @@
 
     user.packages = with pkgs; [
       dash
+
       self.packages.bitsrun # with shortcuts
+      self.packages.atst
     ];
 
     homebrew = {

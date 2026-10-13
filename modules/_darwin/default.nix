@@ -6,4 +6,6 @@
     ./user.nix
     ./zoxide.nix
   ];
+
+  environment.pathsToLink = [ "/Applications" ];
 }

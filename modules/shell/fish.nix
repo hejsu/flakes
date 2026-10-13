@@ -55,6 +55,8 @@ let cfg = config.modules.shell.fish; in {
 
         # 3. Interactive Session Setup (status is-interactive)
         if status is-interactive
+          set -g async_prompt_functions fish_right_prompt
+
           # modules.shell.fish.interactiveInit
           ${cfg.interactiveInit}
 
@@ -88,6 +90,7 @@ let cfg = config.modules.shell.fish; in {
 
     user.packages = with pkgs; [
       # CLI core & tools
+      fishPlugins.async-prompt
       kitty.terminfo
       coreutils
       fzf

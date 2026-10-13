@@ -128,13 +128,12 @@ rec {
         };
 
       # callPackage 先行：平台过滤读的是构建出来的 derivation 上的 meta，
-      # 不是包函数本身。explicitArgs 由 callPackage 原样透传，所以每个包文件
-      # 都得声明 `self`（或写 `...`），哪怕自己用不到。
+      # 不是包函数本身。
       withPkgs = system: packageAttrs:
         let pkgs = pkgsFor system; in
         filterAttrs (_: v: !(v ? meta.platforms) || elem system v.meta.platforms)
           (mapAttrs
-            (_: p: pkgs.callPackage p { self = self.packages.${system}; })
+            (_: p: pkgs.callPackage p { })
             packageAttrs);
 
       mkConfigs = p:
