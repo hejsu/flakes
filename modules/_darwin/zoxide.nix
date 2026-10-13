@@ -1,9 +1,6 @@
 # modules/_darwin/zoxide.nix -- Parity module providing programs.zoxide on macOS (matching NixOS)
-{ config
-, lib
-, pkgs
-, ...
-}:
+{ config, lib, pkgs, ...}:
+
 let
   inherit (lib.options) mkEnableOption mkPackageOption mkOption;
   inherit (lib.modules) mkIf mkAfter;

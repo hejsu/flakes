@@ -10,6 +10,9 @@ let cfg = config.modules.shell.direnv; in {
       enable = true;
       nix-direnv.enable = true;
       silent = true;
+
+      # Workaround for nix-community/nix-direnv#786
+      # REVIEW: Remove when pkgs.direnv gets beyond 3.2.0
       direnvrcExtra = ''
         _nix_refresh_gcroots() { :; }
       '';

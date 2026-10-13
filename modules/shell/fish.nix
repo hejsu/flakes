@@ -55,9 +55,6 @@ let cfg = config.modules.shell.fish; in {
 
         # 3. Interactive Session Setup (status is-interactive)
         if status is-interactive
-          # Local overrides for quick debugging
-          test -e $__fish_config_dir/local.fish; and source $__fish_config_dir/local.fish
-
           # modules.shell.fish.interactiveInit
           ${cfg.interactiveInit}
 

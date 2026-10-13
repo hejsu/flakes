@@ -30,6 +30,8 @@
   };
 
   settings = { self, lib, config, pkgs, ... }: {
+    time.timeZone = "Asia/Shanghai";
+
     system.stateVersion = 6;
 
     home.sessionVariables = {

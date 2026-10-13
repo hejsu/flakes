@@ -4,8 +4,6 @@
 
   home.impure.enable = true;
 
-  time.timeZone = lib.mkDefault "Asia/Shanghai";
-
   user.shell = pkgs.fish;
 
   user.openssh.authorizedKeys.keys = [ self.keys.ss0 ];

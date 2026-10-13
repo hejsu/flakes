@@ -9,7 +9,7 @@ let cfg = config.modules.shell.git; in {
     user.packages = with pkgs; [
       git
       gh
-      # hut
+      hut
       lazygit
     ];
 
