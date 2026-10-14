@@ -80,9 +80,16 @@ function ss_sync --description "Rebuild this host: switch (default), build, roll
 end
 
 function ss_switch --description "nh switch for the local platform"
-    # Clean up dangling symlinks in user config before rebuild to prevent hjem activation failure on removed files
-    find ~/.config ~/.local/share -type l ! -exec test -e '{}' ';' -delete 2>/dev/null
+    # When still swapped, relink first: the next deactivate() refuses swapped/dangling links.
+    if ss_swapped
+        ss_unswap; or return 1
+    end
+
     if test (uname -s) = Darwin
+        # Temp dir: nh <= 4.4.2 leaves a root-owned .cache in the cwd on
+        # `nh darwin switch`, breaking later builds with "Permission denied".
+        # https://github.com/nix-community/nh/issues/739
+        # fixed by PR #758 (post-4.4.2); drop once nixpkgs ships it.
         set -l tmpdir (mktemp -d)
         pushd $tmpdir >/dev/null
         nh darwin switch $argv
@@ -91,6 +98,7 @@ function ss_switch --description "nh switch for the local platform"
         rm -rf $tmpdir 2>/dev/null
         return $ret
     end
+
     nh os switch $argv
 end
 
@@ -103,6 +111,10 @@ function ss_build --description "nh build for the local platform"
 end
 
 function ss_rollback --description "Roll back the system generation"
+    if ss_swapped
+        ss_unswap; or return 1
+    end
+
     if test (uname -s) = Darwin
         sudo darwin-rebuild --rollback $argv
         return $status
@@ -114,12 +126,19 @@ function ss_impure --description "Swap hjem files for mutable repo copies (hjem-
     hjem-impure
 end
 
+function ss_swapped --description "True while hjem links point at the mutable repo (impure mode)"
+    set -l marker "$HOME/.local/state/HJEM_IMPURE_ACTIVE"
+    set -l value (cat -- "$marker" 2>/dev/null)
+    test "$value" = 1
+end
+
 function ss_unswap --description "Restore store symlinks by re-running the hjem agent"
     echo "Re-linking hjem files to the store (local swapped copies will be replaced)..."
     if test (uname -s) = Darwin
         launchctl kickstart -k gui/(id -u)/org.hjem.activate
     else
-        systemctl --user restart org.hjem.activate
+        # NixOS: activation runs as a system unit (org.hjem.activate is darwin-only).
+        sudo systemctl start hjem-activate@(id -un).service
     end
 end
 
@@ -199,7 +218,7 @@ function ss_deploy --description "Sync dotfiles to remote host(s) and rebuild"
         rsync -az --delete \
             --exclude .git --exclude .cache --exclude .direnv --exclude 'result*' \
             "$flakeHome/" "$host:$dir/"
-        and ssh -t $host "test -d '$dir/.git' && git -C '$dir' add -A 2>/dev/null; find ~/.config ~/.local/share -type l ! -exec test -e '{}' ';' -delete 2>/dev/null; nh os switch -H $host"
+        and ssh -t $host "test -d '$dir/.git' && git -C '$dir' add -A 2>/dev/null; sh -c 'if [ \"\$(cat \$HOME/.local/state/HJEM_IMPURE_ACTIVE 2>/dev/null)\" = 1 ]; then sudo systemctl start hjem-activate@\$USER.service; fi' && nh os switch -H $host"
         or begin
             echo "==> Deploy to $host failed!" >&2
             return 1

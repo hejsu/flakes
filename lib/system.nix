@@ -42,7 +42,7 @@ rec {
     ]
     ++ extraModules;
 
-  # Flake 顶层构建器
+  # Flake top-level builder.
   mkFlake = inputs@{ self, nixpkgs, ... }:
     { hosts ? { }
     , systems ? [ "aarch64-darwin" "x86_64-linux" ]
@@ -77,12 +77,14 @@ rec {
           sourceDir = self;
           configDir = self + /config;
           keys = import ./keys.nix;
-          # 递归将所有 inputs 按当前主机的 system 扁平化，模块可直接使用 self.inputs.<flake>.packages.<pkg>
+          # Flatten all inputs to this host's system: self.inputs.<flake>.packages.<pkg>.
           inputs = mapAttrs (_: forSystem system) inputs;
-          # 提取外部 inputs 中当前平台对应的模块（darwinModules 或 nixosModules）
+          # Pull the platform's modules out of each input (darwinModules or nixosModules).
           modules = mapAttrs (_: i: i.${platform.moduleKey} or { }) inputs;
         };
 
+      # Platform probe: host files must be plain attrsets; a function gets {}
+      # for every argument, and only .system is read.
       getSystem = path:
         let fn = import path; in
         (if isFunction fn then fn (mapAttrs (_: _: { }) (functionArgs fn)) else fn).system;
@@ -128,11 +130,11 @@ rec {
           };
         };
 
-      # callPackage 先行：平台过滤读的是构建出来的 derivation 上的 meta，
-      # 不是包函数本身。
+      # callPackage first: platform checks read meta off the built derivation,
+      # not the package function.
       withPkgs = system: packageAttrs:
         let pkgs = pkgsFor system; in
-        filterAttrs (_: v: !(v ? meta.platforms) || elem system v.meta.platforms)
+        filterAttrs (_: lib.meta.availableOn pkgs.stdenv.hostPlatform)
           (mapAttrs
             (_: p: pkgs.callPackage p { })
             packageAttrs);

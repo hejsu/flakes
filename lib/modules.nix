@@ -2,7 +2,7 @@
 
 with lib;
 let isModuleFile = n: v: v == "regular" && n != "default.nix" && hasSuffix ".nix" n; in {
-  # 统一的模块目录递归扫描器（modules, packages, overlays）
+  # Recursive scanner shared by modules/packages/overlays.
   mapModules = dir: fn:
     let
       walk = prefix: path:

@@ -19,5 +19,5 @@ local mappings = {
 }
 
 for _, mapping in ipairs(mappings) do
-  vim.keymap.set(mapping.mode or "n", mapping.from, mapping.to, { noremap = true })
+  vim.keymap.set(mapping.mode or "n", mapping.from, mapping.to)
 end

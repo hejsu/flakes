@@ -61,14 +61,14 @@ rec {
     };
   };
 
-  # 规范求值：基于 hostSubmodule 验证并填充默认值
+  # Validated eval: apply hostSubmodule to fill in defaults.
   evalHost = { module, specialArgs ? { } }:
     (evalModules {
       modules = [ hostSubmodule module ];
       inherit specialArgs;
     }).config;
 
-  # mapHosts 仅扫描并记录路径，推迟到 mkFlake 带着 self 上下文完整求值
+  # mapHosts only records paths; full eval happens in mkFlake where self exists.
   mapHosts = dir:
     mapAttrs
       (hostName: _:

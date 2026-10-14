@@ -17,7 +17,6 @@ ICON = "  "
 RIGHT_MARGIN = 1
 
 icon_fg = as_rgb(color_as_int(Color(203, 166, 247)))
-icon_bg = as_rgb(color_as_int(Color(49, 50, 68)))
 clock_color = as_rgb(0x94E2D5)
 utc_color = as_rgb(color_as_int(Color(108, 112, 134)))
 

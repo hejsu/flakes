@@ -7,7 +7,7 @@
 # rendered config, so using it here would mean forcing three settings back.
 # Running as the login user (like the launchd agent in
 # modules/_darwin/cliproxyapi.nix) keeps the config in $HOME readable.
-{ config, lib, pkgs, ... }:
+{ self, config, lib, ... }:
 
 let cfg = config.modules.services.cliproxyapi; in {
   options.modules.services.cliproxyapi = {
@@ -32,7 +32,7 @@ let cfg = config.modules.services.cliproxyapi; in {
 
       serviceConfig = {
         User = config.user.name;
-        ExecStart = "${lib.getExe pkgs.cliproxyapi} -config ${cfg.configFile}";
+        ExecStart = "${lib.getExe self.inputs.llm-agents.packages.cli-proxy-api} -config ${cfg.configFile}";
         WorkingDirectory = "${config.home.stateDir}/cliproxyapi";
         Restart = "on-failure";
         RestartSec = 5;

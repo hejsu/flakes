@@ -3,7 +3,7 @@
 # The switch and `configFile` come from the shared module in
 # modules/services/cliproxyapi.nix; its systemd half is dropped here by
 # modules/_darwin/parity.nix.
-{ config, lib, pkgs, ... }:
+{ self, config, lib, ... }:
 
 let cfg = config.modules.services.cliproxyapi; in {
   config = lib.mkIf cfg.enable {
@@ -16,7 +16,7 @@ let cfg = config.modules.services.cliproxyapi; in {
 
       serviceConfig = {
         ProgramArguments = [
-          (lib.getExe pkgs.cliproxyapi)
+          (lib.getExe self.inputs.llm-agents.packages.cli-proxy-api)
           "-config"
           "${cfg.configFile}"
         ];

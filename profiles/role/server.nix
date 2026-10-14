@@ -1,7 +1,7 @@
 # profiles/role/server.nix
 #
 # Baseline preset for headless / server environments across macOS & Linux.
-{ lib, ... }: {
+{ lib, config, ... }: {
   # Weekly nix GC
   nix.gc = {
     automatic = true;
@@ -26,7 +26,7 @@
   nix.settings = {
     warn-dirty = false;
     use-xdg-base-directories = true;
-    trusted-users = [ "suspen" "root" ];
+    trusted-users = [ config.user.name "root" ];
     experimental-features = [ "nix-command" "flakes" ];
   };
 }

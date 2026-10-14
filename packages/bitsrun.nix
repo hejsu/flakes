@@ -1,4 +1,4 @@
-# BitSrunLoginGo (bitsrun) —— 深澜（srun）校园网认证客户端。
+# BitSrunLoginGo (bitsrun): srun campus network login client.
 { lib
 , buildGoModule
 , fetchFromGitHub

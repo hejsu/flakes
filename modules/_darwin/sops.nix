@@ -1,4 +1,4 @@
-# sops-nix darwin 后端的选项垫片。
+# Option shims for sops-nix's darwin backend.
 { lib, ... }:
 
 let

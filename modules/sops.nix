@@ -26,15 +26,15 @@ let cfg = config.modules.sops; in {
   config = lib.mkIf cfg.enable {
     assertions = [
       {
-        assertion = builtins.pathExists (self.sourceDir + "/hosts/${config.networking.hostName}/assets/secrets.yaml");
-        message = "modules.sops: defaultSopsFile does not exist. Expected hosts/${config.networking.hostName}/assets/secrets.yaml.";
+        assertion = builtins.pathExists (self.hostDir + "/assets/secrets.yaml");
+        message = "modules.sops: defaultSopsFile does not exist. Expected ${self.hostDir}/assets/secrets.yaml.";
       }
     ];
 
     environment.systemPackages = [ pkgs.sops pkgs.age ];
 
     sops = {
-      defaultSopsFile = self.sourceDir + "/hosts/${config.networking.hostName}/assets/secrets.yaml";
+      defaultSopsFile = self.hostDir + "/assets/secrets.yaml";
 
       age = {
         keyFile = cfg.ageKeyFile;

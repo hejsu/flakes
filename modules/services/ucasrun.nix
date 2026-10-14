@@ -1,4 +1,4 @@
-# UCAS（中国科学院大学）深澜（srun）校园网自动认证。
+# UCAS (University of Chinese Academy of Sciences) srun campus network login.
 { self, config, lib, ... }:
 
 let cfg = config.modules.services.ucasrun; in {
@@ -22,39 +22,39 @@ let cfg = config.modules.services.ucasrun; in {
           password: "${config.sops.placeholder."sep-password"}"
 
         meta:
-          # 以下都是 UCAS 门户页里带出来的固定值
+          # Fixed values from the UCAS portal page.
           "n": "200"
           type: "1"
-          acid: "1" # 上游默认值 5 是别的学校的，必须改
+          acid: "1" # upstream default 5 targets another school; must change
           enc: srun_bx1
           info_prefix: SRBX1
-          double_stack: false # UCAS 门户 DoubleStackPC = false
+          double_stack: false # UCAS portal DoubleStackPC = false
           os: Windows 10
           name: windows
 
         settings:
           basic:
-            https: true # 门户已 301 到 https
-            skip_cert_verify: false # 证书由 GlobalSign 签发给 *.ucas.ac.cn，可正常校验
+            https: true # portal 301s to https
+            skip_cert_verify: false # GlobalSign cert for *.ucas.ac.cn; verification works
             timeout: 10
           guardian:
-            enable: false # 常驻守护，掉线自动重连；false 则只认证一次就退出
-            duration: 60 # 复查间隔（秒）
+            enable: false # guardian reconnects on drop; false = authenticate once and exit
+            duration: 60 # recheck interval (seconds)
           backoff:
             enable: true
-            max_retries: 0 # 0 = 无限重试
+            max_retries: 0 # 0 = unlimited
             initial_duration: 2
             max_duration: 300
-            # 必须写 1：上游走的是 backoff.NewInstance，它**不**套用 New() 里的
-            # `ExponentFactor <= 0 -> 1` 兜底。留空 = 0 = `(wait + 0) << 0 + 0` = wait 恒定，
-            # 退避就退不起来了，登录失败会一直 2 秒一轮。
+            # Must be 1: upstream calls backoff.NewInstance, which does NOT
+            # apply New()'s `ExponentFactor <= 0 -> 1` fallback. At 0 the wait
+            # stays constant, so failed logins retry every 2s.
             exponent_factor: 1
           log:
-            debug_level: false # 排查问题时改 true
+            debug_level: false # set true when debugging
           ddns:
-            enable: false # 需要校园网内网 IP 的 DDNS 时再开
+            enable: false # enable for DDNS on the campus intranet IP
           reality:
-            enable: false # 登录出问题时设为 true，会从 http://www.baidu.com 模拟浏览器进登录页
+            enable: false # set true when login fails; simulates a browser via http://www.baidu.com
           custom_header:
             User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36
       '';

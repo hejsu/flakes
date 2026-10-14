@@ -57,6 +57,7 @@
   hardware = { ... }: {
     virtualisation.hypervGuest.enable = true;
 
+    boot.tmp.useTmpfs = true;
     boot.loader = {
       efi.canTouchEfiVariables = true;
       systemd-boot = {
@@ -64,7 +65,7 @@
         configurationLimit = 10;
       };
     };
-
+  
     fileSystems."/" = {
       device = "/dev/disk/by-uuid/7855b7f2-2287-42bd-b0cd-21846731f6ae";
       fsType = "btrfs";
