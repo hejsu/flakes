@@ -1,4 +1,4 @@
-{ pkgs, config, ... }: {
+{ pkgs, config, lib, ... }: {
   # ONLY DARWIN
   assertions = [{
     assertion = pkgs.stdenv.hostPlatform.isDarwin;
