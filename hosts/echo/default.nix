@@ -16,6 +16,7 @@
     services = {
       ssh.enable = true;
       ucasrun.enable = true;
+      singbox.enable = true;
     };
 
     shell = {
@@ -50,6 +51,10 @@
         IPv6PrivacyExtensions = "kernel";
       };
     };
+
+    environment.etc."gai.conf".text = ''
+      precedence ::ffff:0:0/96 100
+    '';
 
     system.stateVersion = "26.11";
   };
