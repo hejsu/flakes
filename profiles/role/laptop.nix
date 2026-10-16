@@ -29,6 +29,10 @@
     max-substitution-jobs = 32
   '';
 
+  environment.profiles = lib.mkOrder 750 [
+    "${config.home.stateDir}/nix/profile"
+  ];
+
   # macOS 
   # Host & User identity
   system.primaryUser = config.user.name;

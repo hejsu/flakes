@@ -32,7 +32,6 @@ let cfg = config.modules.services.singbox; in {
 
     boot.kernel.sysctl = {
       "net.ipv4.ip_forward" = 1;
-      "net.ipv6.conf.all.forwarding" = 1;
       "net.ipv4.conf.all.rp_filter" = 2;
       "net.ipv4.conf.default.rp_filter" = 2;
     };
@@ -65,6 +64,7 @@ let cfg = config.modules.services.singbox; in {
 
         ${lib.getExe pkgs.curl} \
           --fail --silent --show-error --location \
+          --user-agent "sing-box" \
           --retry 3 --retry-delay 5 --connect-timeout 10 --max-time 60 \
           --output "$tmp" \
           -- "$url"

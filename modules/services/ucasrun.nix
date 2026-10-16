@@ -28,7 +28,7 @@ let cfg = config.modules.services.ucasrun; in {
           acid: "1" # upstream default 5 targets another school; must change
           enc: srun_bx1
           info_prefix: SRBX1
-          double_stack: false # UCAS portal DoubleStackPC = false
+          double_stack: false # Authenticate both IPv4 and IPv6 on UCAS Srun gateway
           os: Windows 10
           name: windows
 

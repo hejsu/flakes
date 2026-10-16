@@ -9,9 +9,17 @@
 # Values are accepted and dropped; nothing on darwin consumes them. This is one
 # shim for the whole namespace, so new services need no changes here.
 { lib, ... }: {
-  options.systemd = lib.mkOption {
-    type = lib.types.attrsOf lib.types.anything;
-    default = { };
-    description = "Parity shim for shared Linux-first service wiring; unused on darwin.";
+  options = {
+    systemd = lib.mkOption {
+      type = lib.types.attrsOf lib.types.anything;
+      default = { };
+      description = "Parity shim for shared Linux-first service wiring; unused on darwin.";
+    };
+
+    boot = lib.mkOption {
+      type = lib.types.attrsOf lib.types.anything;
+      default = { };
+      description = "Parity shim for shared Linux-first boot/sysctl wiring; unused on darwin.";
+    };
   };
 }

@@ -27,7 +27,7 @@
     };
   };
 
-  settings = { ... }: {
+  settings = { pkgs, ... }: {
     user = {
       initialHashedPassword = "$6$8fKq2Zr9PmLxWvTy$o6W7AAu2IewTITRyufOT8R6i4WqeQxJLs.PZFUEHagBuOdxlAPhktx0OsLj.splluOmMsMmim0cGNjHrabxOW.";
     };
@@ -39,6 +39,31 @@
 
     programs.nix-ld.enable = true;
 
+    systemd.services.ipv6-ndisc-keepalive = {
+      description = "IPv6 Gateway NDP Refresh Keepalive";
+      wants = [ "network-online.target" ];
+      after = [ "network-online.target" ];
+      path = [ pkgs.iproute2 pkgs.ndisc6 pkgs.gawk pkgs.iputils ];
+      script = ''
+        read -r gw ip < <(ip -6 route get 2001:db8::1 | awk '{for(i=1;i<=NF;i++) {if($i=="via") gw=$(i+1); if($i=="src") ip=$(i+1)}} END {print gw, ip}')
+        if [ -n "$gw" ] && [ -n "$ip" ]; then
+          ndisc6 -1 -r 1 -w 250 -q -s "$ip" "$gw" eth0 || true
+          ping -6 -c 1 -W 1 -I "$ip" 2400:3200::1 >/dev/null 2>&1 || true
+        fi
+      '';
+      serviceConfig = {
+        Type = "oneshot";
+      };
+    };
+
+    systemd.timers.ipv6-ndisc-keepalive = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnBootSec = "10s";
+        OnUnitActiveSec = "30s";
+      };
+    };
+
     systemd.network = {
       enable = true;
       wait-online.enable = false;
@@ -48,7 +73,7 @@
       matchConfig.Name = "eth0";
       networkConfig = {
         DHCP = "yes";
-        IPv6PrivacyExtensions = "kernel";
+        IPv6PrivacyExtensions = "yes";
       };
     };
 
