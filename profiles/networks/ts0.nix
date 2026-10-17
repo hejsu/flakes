@@ -5,6 +5,6 @@
     enable = true;
     useRoutingFeatures = "none";
     openFirewall = true;
-    extraUpFlags = [ "--accept-dns=false" ];
+    extraSetFlags = [ "--accept-dns=false" ];
   };
 }
