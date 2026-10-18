@@ -25,7 +25,7 @@
   };
 
   ## Local config
-  settings = { self, ... }: {
+  settings = { ... }: {
     user = {
       initialHashedPassword = "$6$A/Ms/0m62sATO5ge$8dAjphC5IF5bKOa8W2/MEsVgW8HaL1lRZBeUi3ZO8hk1lkuU25HQVQ5m8zQobvtJZAk3NPRjeJq3zh7EQEdML0";
     };
@@ -46,7 +46,9 @@
       };
     };
 
-    user.openssh.authorizedKeys.keys = [ self.keys.ss0 self.keys.lxz ];
+    user.openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHJH2kt92wMUL0HavbaoyDqYQA0pjusb54lIXIQSEg7H xianzliang@foxmail.com"
+    ];
 
     system.stateVersion = "23.11";
   };

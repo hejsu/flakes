@@ -76,7 +76,6 @@ rec {
           hostDir = dirOf hostPath;
           sourceDir = self;
           configDir = self + /config;
-          keys = import ./keys.nix;
           # Flatten all inputs to this host's system: self.inputs.<flake>.packages.<pkg>.
           inputs = mapAttrs (_: forSystem system) inputs;
           # Pull the platform's modules out of each input (darwinModules or nixosModules).

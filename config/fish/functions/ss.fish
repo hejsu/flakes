@@ -1,138 +1,145 @@
 function ss --description "Helper for managing dotfiles"
-    set -l flakeHome "$NH_FLAKE"
-    if test -z "$flakeHome"
-        set flakeHome "$HOME/.config/dotfiles"
-    end
-    set -x NH_FLAKE $flakeHome
+    set -q NH_FLAKE[1]; or set -gx NH_FLAKE $HOME/.config/dotfiles
 
-    set -l cmd "$argv[1]"
-    set -q argv[1]; and set -e argv[1]
+    set -l cmd $argv[1]
+    set -e argv[1]
 
     switch $cmd
-        case '' sync
+        case '' sync s
             ss_sync $argv
-        case impure swap
-            ss_impure
+        case swap sw impure
+            hjem-impure
         case unswap relink
             ss_unswap
         case gc
             ss_gc $argv
         case pull
-            ss_pull $argv
+            nix flake update --flake $NH_FLAKE $argv
         case gens generations
-            if test (uname -s) = Darwin
-                darwin-rebuild --list-generations
-            else
-                nh os info $argv
-            end
+            ss_gens $argv
         case repl
-            ss_repl $argv
+            nix repl --extra-experimental-features 'flakes repl-flake' --impure $NH_FLAKE $argv
         case path
             ss_path $argv
         case deploy
             ss_deploy $argv
-        case az echo
-            ss_deploy $cmd $argv
         case help -h --help
             ss_help
+        case '-*'
+            ss_sync $cmd $argv
         case "*"
-            nh $cmd $argv
+            # A bare host name is deploy shorthand: `ss echo` == `ss deploy echo`.
+            # Derived from hosts/ so new machines need no edit here. The local
+            # host is excluded because rebuilding it is what `ss sync` does.
+            if test -d $NH_FLAKE/hosts/$cmd; and test "$cmd" != (hostname -s)
+                ss_deploy $cmd $argv
+            else
+                nh $cmd $argv
+            end
     end
 end
 
 function ss_help --description "Show ss usage"
-    echo "ss - dotfiles helper"
-    echo
-    echo "Usage: ss [command] [args...]"
-    echo
-    echo "Commands:"
-    echo "  sync [switch|build|rollback] [args]  Rebuild this host (default: switch)"
-    echo "  impure | swap                        Swap hjem files for mutable repo copies"
-    echo "  unswap | relink                      Restore store symlinks (re-runs the hjem agent)"
-    echo "  gc [-u] [-d] [-D] [-n] [args]        Clean profiles and optimise the store"
-    echo "  pull [inputs...]                     Update flake inputs"
-    echo "  gens                                 List system generations"
-    echo "  repl [args]                          Open a nix repl with the flake preloaded"
-    echo "  path [area] [segments...]            Print a path inside the repo"
-    echo "  deploy <host...>                     Sync dotfiles to remote host(s) and rebuild"
-    echo "  help, -h, --help                     Show this help"
-    echo
-    echo "Anything else is passed through to nh."
+    echo 'ss - dotfiles helper
+
+Usage: ss [command] [args...]
+
+Commands:
+  sync|s [verb] [args]   Rebuild this host via nh (default verb: switch)
+  swap|sw                Swap store links for mutable copies
+  unswap|relink          Restore store links (re-runs the hjem agent)
+  gc [-u] [-d] [-D] [-n] Clean profiles and optimise the store
+  pull [inputs...]       Update flake inputs
+  gens                   List system generations
+  repl [args]            Open a nix repl with the flake preloaded
+  path [area] [rest...]  Print a path inside the repo
+  deploy <host...>       Push this checkout to host(s) and rebuild
+  <host> [args]          Shorthand for "ss deploy <host>"
+  help|-h|--help         Show this help
+
+sync passes its verb straight to nh, so any nh subcommand works:
+  switch  build  test  boot  rollback  repl  info  build-vm  build-image
+  (nh darwin only ships switch, build and repl; rollback uses darwin-rebuild)
+
+Anything else is passed through to nh.'
 end
 
-function ss_sync --description "Rebuild this host: switch (default), build, rollback"
-    set -l action "$argv[1]"
-    set -q argv[1]; and set -e argv[1]
-    echo "> "(hostname -s)" ("(uname -sm)")"
-    switch $action
-        case '' switch
-            ss_switch $argv
-        case build
-            ss_build $argv
+function ss_sync --description "Rebuild this host via nh (default verb: switch)"
+    # A leading flag means the verb was omitted, so `ss --dry` == `ss sync --dry`.
+    set -l verb switch
+    if set -q argv[1]; and not string match -qr '^-' -- $argv[1]
+        set verb $argv[1]
+        set -e argv[1]
+    end
+
+    ss_require_clean; or return 1
+
+    if test (uname -s) != Darwin
+        nh os $verb $argv
+        return
+    end
+
+    # nh darwin has no rollback, and only switch elevates -- which is what
+    # triggers the .cache bug handled by ss_nh_in_scratch.
+    switch $verb
         case rollback
-            ss_rollback $argv
-        case '-*'
-            ss_switch $action $argv
-        case "*"
-            echo "ss sync: unknown action '$action' (switch|build|rollback)" >&2
-            return 1
+            sudo darwin-rebuild --rollback $argv
+        case switch
+            ss_nh_in_scratch darwin switch $argv
+        case '*'
+            nh darwin $verb $argv
     end
 end
 
-function ss_switch --description "nh switch for the local platform"
-    # When still swapped, relink first: the next deactivate() refuses swapped/dangling links.
-    if ss_swapped
-        ss_unswap; or return 1
-    end
+function ss_require_clean --description "Abort when mutable copies would be clobbered"
+    # Activation relinks impure copies into the store, so rebuilding or syncing
+    # over the checkout silently drops in-place edits. A host only changes which
+    # shell runs the check.
+    set -l check 'cat "$HOME/.local/state/HJEM_IMPURE_ACTIVE" 2>/dev/null'
+    set -l cmd sh -c $check
+    set -q argv[1]; and set cmd ssh $argv[1] $check
+    set -l state ($cmd)
+    test "$state" = 1; or return 0
 
-    if test (uname -s) = Darwin
-        # Temp dir: nh <= 4.4.2 leaves a root-owned .cache in the cwd on
-        # `nh darwin switch`, breaking later builds with "Permission denied".
-        # https://github.com/nix-community/nh/issues/739
-        # fixed by PR #758 (post-4.4.2); drop once nixpkgs ships it.
-        set -l tmpdir (mktemp -d)
-        pushd $tmpdir >/dev/null
-        nh darwin switch $argv
-        set -l ret $status
-        popd >/dev/null
-        rm -rf $tmpdir 2>/dev/null
-        return $ret
-    end
-
-    nh os switch $argv
+    set -l where
+    set -q argv[1]; and set where " on $argv[1]"
+    set -l hint (string join -- ' ' ss unswap $argv[1])
+    printf '%s\n' \
+        "ss: impure mode is active$where" \
+        "  activation would replace your mutable copies with store links." \
+        "  run '$hint' first, or copy out the edits you want to keep." >&2
+    return 1
 end
 
-function ss_build --description "nh build for the local platform"
+function ss_gens --description "List system generations"
     if test (uname -s) = Darwin
-        nh darwin build $argv
+        # The system profile is root-owned and nix-env needs its lock file to
+        # enumerate generations, so this has to elevate. Read-only otherwise.
+        sudo darwin-rebuild --list-generations
     else
-        nh os build $argv
+        nh os info $argv
     end
 end
 
-function ss_rollback --description "Roll back the system generation"
-    if ss_swapped
-        ss_unswap; or return 1
-    end
-
-    if test (uname -s) = Darwin
-        sudo darwin-rebuild --rollback $argv
-        return $status
-    end
-    nh os rollback $argv
+function ss_nh_in_scratch --description "Run nh from a throwaway cwd (nh <= 4.4.2 .cache bug)"
+    # TODO(nh): drop once pkgs.nh >= 4.5.0.
+    # nh <= 4.4.2 sets HOME="" when elevating, so `nh darwin switch` drops a
+    # root-owned .cache in the cwd and later builds hit "Permission denied"
+    # (issues/739, fixed in PR 758 / v4.5.0-beta1). The cd happens in a child
+    # shell so Ctrl-C cannot strand this shell, and one fixed path is reused:
+    # a root-owned .cache cannot be removed as the user, so mktemp would leak
+    # one directory per interrupted attempt.
+    set -l scratch $TMPDIR/nh-switch.$USER
+    test -n "$TMPDIR"; or set scratch /tmp/nh-switch.$USER
+    rm -rf $scratch 2>/dev/null
+    mkdir -p $scratch
+    command fish --no-config -c 'cd $argv[1]; and nh $argv[2..-1]' $scratch $argv
+    set -l ret $status
+    rm -rf $scratch 2>/dev/null
+    return $ret
 end
 
-function ss_impure --description "Swap hjem files for mutable repo copies (hjem-impure)"
-    hjem-impure
-end
-
-function ss_swapped --description "True while hjem links point at the mutable repo (impure mode)"
-    set -l marker "$HOME/.local/state/HJEM_IMPURE_ACTIVE"
-    set -l value (cat -- "$marker" 2>/dev/null)
-    test "$value" = 1
-end
-
-function ss_unswap --description "Restore store symlinks by re-running the hjem agent"
+function ss_unswap --description "Restore store symlinks by re-running the hjem activation agent"
     echo "Re-linking hjem files to the store (local swapped copies will be replaced)..."
     if test (uname -s) = Darwin
         launchctl kickstart -k gui/(id -u)/org.hjem.activate
@@ -143,82 +150,71 @@ function ss_unswap --description "Restore store symlinks by re-running the hjem 
 end
 
 function ss_gc --description "Clean profiles and optimise the store"
-    argparse --ignore-unknown 'u/user' 'd/delete-old' 'D/delete-all-old' 'n/dry' -- $argv
-    or return 1
-    set -l mode all
-    set -q _flag_user; and set mode user
-    set -l extra
-    set -q _flag_dry; and set -a extra --dry
-    set -q _flag_delete_old; and set -a extra --keep-since 14d
-    set -q _flag_delete_all_old; and set -a extra --keep 1
-    nh clean $mode --optimise $extra $argv
-end
-
-function ss_pull --description "Update flake inputs (all, or a subset)"
-    if test (count $argv) -eq 0
-        nix flake update --flake $NH_FLAKE
-    else
-        nix flake update --flake $NH_FLAKE $argv
+    argparse -i 'u/user' 'd/delete-old' 'D/delete-all-old' 'n/dry' -- $argv; or return 1
+    set -l args all --optimise
+    set -q _flag_user; and set args[1] user
+    set -q _flag_dry; and set -a args --dry
+    if set -q _flag_delete_all_old
+        set -a args --keep 1
+    else if set -q _flag_delete_old
+        set -a args --keep-since 14d
     end
-end
-
-function ss_repl --description "Open a nix repl with the flake preloaded"
-    nix repl --extra-experimental-features 'flakes repl-flake' --impure $NH_FLAKE $argv
+    nh clean $args $argv
 end
 
 function ss_path --description "Print a path inside the dotfiles repo"
     set -l area $argv[1]
-    set -l rest $argv[2..-1]
     set -l base
     switch $area
         case '' home flake
             set base $NH_FLAKE
-        case config
-            set base $NH_FLAKE/config
+        case config hosts lib modules overlays packages profiles
+            set base $NH_FLAKE/$area
         case bin
             set base $NH_FLAKE/config/bin
-        case hosts
-            set base $NH_FLAKE/hosts
         case host
             set base $NH_FLAKE/hosts/(hostname -s)
-        case lib modules overlays packages profiles
-            set base $NH_FLAKE/$area
         case profile
             set base /nix/var/nix/profiles/system
-        case "*"
+        case '*'
             echo "ss path: unknown area '$area'" >&2
             return 1
     end
-    set -l suffix (string join / $rest)
-    if test -n "$suffix"
-        echo $base/$suffix
-    else
-        echo $base
-    end
+    set -l rest (string join -- / $argv[2..-1])
+    test -n "$rest"; and set rest /$rest
+    # Quoted: concatenating an empty list unquoted would drop the whole word.
+    echo "$base$rest"
 end
 
-function ss_deploy --description "Sync dotfiles to remote host(s) and rebuild"
-    if test (count $argv) -eq 0
+function ss_deploy --description "Push this checkout to host(s) and rebuild"
+    set -q argv[1]; or begin
         echo "Usage: ss deploy <host...>" >&2
         return 1
     end
 
-    set -l flakeHome "$NH_FLAKE"
-    if test -z "$flakeHome"
-        set flakeHome "$HOME/.config/dotfiles"
-    end
-
-    set -l dir "/home/suspen/.config/dotfiles"
+    # ~/.ssh/config multiplexes rsync and ssh, but nh passes its own ControlPath
+    # on the command line, which outranks the config; NH_SSHOPTS is prepended to
+    # those defaults, so this keeps nh on the same socket.
+    set -lx NH_SSHOPTS "-o ControlPath=$HOME/.ssh/sockets/%C"
 
     for host in $argv
-        set host (string trim $host)
-        test -z "$host"; and continue
+        set host (string trim -- $host)
+        test -n "$host"; or continue
+        if string match -qr '^-' -- $host
+            echo "ss deploy: '$host' looks like a flag; pass host names only" >&2
+            return 1
+        end
 
         echo "==> Deploying to $host..."
+        ss_require_clean $host; or return 1
+
         rsync -az --delete \
             --exclude .git --exclude .cache --exclude .direnv --exclude 'result*' \
-            "$flakeHome/" "$host:$dir/"
-        and ssh -t $host "test -d '$dir/.git' && git -C '$dir' add -A 2>/dev/null; sh -c 'if [ \"\$(cat \$HOME/.local/state/HJEM_IMPURE_ACTIVE 2>/dev/null)\" = 1 ]; then sudo systemctl start hjem-activate@\$USER.service; fi' && nh os switch -H $host"
+            "$NH_FLAKE/" "$host:.config/dotfiles/"
+        # Evaluate locally, build and activate on the target; pure evaluation
+        # yields the same drv the target would, so only the work moves.
+        and nh os switch -H (string replace -r '^.*@' '' -- $host) \
+            --build-host $host --target-host $host
         or begin
             echo "==> Deploy to $host failed!" >&2
             return 1
