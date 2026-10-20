@@ -50,6 +50,9 @@
         DHCP = "yes";
         IPv6PrivacyExtensions = "yes";
       };
+      ipv6AcceptRAConfig = {
+        RouterDenyList = [ "fe80::1" ];
+      };
     };
 
     environment.etc."gai.conf".text = ''
