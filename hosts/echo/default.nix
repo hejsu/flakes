@@ -15,7 +15,7 @@
 
     services = {
       ssh.enable = true;
-      ucasrun.enable = true;
+      ucasnet.enable = true;
       singbox.enable = true;
     };
 

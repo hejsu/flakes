@@ -25,7 +25,7 @@
 
     services = {
       cliproxyapi.enable = true;
-      ucasrun.enable = true; # set through Shortcuts
+      ucasnet.enable = true;
     };
   };
 
@@ -33,17 +33,6 @@
     time.timeZone = "Asia/Shanghai";
 
     system.stateVersion = 6;
-
-    environment.systemPackages = [
-      (pkgs.writeShellScriptBin "fix-ipv6-route" ''
-        export SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
-        exec ${pkgs.python3}/bin/python3 ${./assets/fix-ipv6-route.py} "$@"
-      '')
-    ];
-
-    security.sudo.extraConfig = ''
-      suspen ALL=(root) NOPASSWD: /run/current-system/sw/bin/fix-ipv6-route
-    '';
 
     home.sessionVariables = {
       SSH_AUTH_SOCK = "${config.home.dir}/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh";
@@ -65,7 +54,7 @@
     user.packages = with pkgs; [
       dash
 
-      self.packages.bitsrun # with shortcuts
+      self.packages.bitsrun
       self.packages.atst
     ];
 
