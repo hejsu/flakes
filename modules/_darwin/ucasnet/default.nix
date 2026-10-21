@@ -33,7 +33,7 @@ let
     dorm=10.211.199.255
     anchor=com.apple/ucasnet-ra-guard
 
-    broadcast=$(/sbin/ifconfig en0 | awk '/inet /{print $NF}')
+    broadcast="''${1:-}"
 
     if ! /sbin/pfctl -s info | grep -q "Status: Enabled"; then
       /sbin/pfctl -e
@@ -53,15 +53,7 @@ let
 
       echo "[$(date)] dorm subnet, blocking rogue fe80::1 RA"
 
-      # Authenticating costs a round trip, so only redo it when the address
-      # changed since boot; plain renewals keep the same address.
-      key="$(/usr/sbin/sysctl -n kern.boottime | awk '{print $4}') $broadcast"
-      if [ -f /var/run/ucasnet.login ] && [ "$key" = "$(cat /var/run/ucasnet.login)" ]; then
-        exit 0
-      fi
-
       ${lib.getExe self.packages.bitsrun} -config "${config.sops.templates."bitsrun-config.yaml".path}"
-      echo "$key" > /var/run/ucasnet.login
     else
       /sbin/pfctl -a $anchor -t rogue_routers -T flush
       echo "[$(date)] not the dorm subnet, guard cleared"

@@ -1,36 +1,87 @@
 /*
- * ucasnet-watcher -- notify a script whenever en0's IPv4 setup changes.
+ * ucasnet-watcher -- run a script whenever en0's IPv4 broadcast address changes.
  *
  * Watches State:/Network/Interface/en0/IPv4 in configd's dynamic store. That
  * key holds only Addresses/BroadcastAddresses/SubnetMasks, so it changes when
  * the interface really gets a different address (or loses it) -- DNS churn,
  * IPv6 router advertisements, Wi-Fi scans and roaming never touch it.
  *
+ * The notification only means "the key was written", and configd rewrites it
+ * on every DHCP renewal, so the value is compared here and identical updates
+ * are dropped without spawning anything.
+ *
  * Usage: ucasnet-watcher <script>
  *
- * Only forwards the event; deciding what changed and whether to act is left to
- * the script, which can read the interface itself. That keeps this file small.
+ * The script receives the current broadcast address as argv[1], or an empty
+ * string when en0 has no IPv4 address. It runs once at startup so a reboot
+ * always re-applies the current state.
  */
 #include <SystemConfiguration/SystemConfiguration.h>
 #include <dispatch/dispatch.h>
 #include <spawn.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/wait.h>
 
 extern char **environ;
 
-static void spawn(const char *path) {
-    char *argv[] = { (char *)path, NULL };
+static char last[64];
+static int seen;
+
+static CFStringRef copy_broadcast(SCDynamicStoreRef store) {
+    CFStringRef key = CFSTR("State:/Network/Interface/en0/IPv4");
+    CFPropertyListRef value = SCDynamicStoreCopyValue(store, key);
+    if (value == NULL) {
+        return NULL;
+    }
+    if (CFGetTypeID(value) != CFDictionaryGetTypeID()) {
+        CFRelease(value);
+        return NULL;
+    }
+
+    CFStringRef broadcast = NULL;
+    CFArrayRef addrs = CFDictionaryGetValue(value, CFSTR("BroadcastAddresses"));
+    if (addrs != NULL && CFGetTypeID(addrs) == CFArrayGetTypeID() &&
+        CFArrayGetCount(addrs) > 0) {
+        CFStringRef first = CFArrayGetValueAtIndex(addrs, 0);
+        if (first != NULL && CFGetTypeID(first) == CFStringGetTypeID()) {
+            broadcast = CFStringCreateCopy(NULL, first);
+        }
+    }
+
+    CFRelease(value);
+    return broadcast;
+}
+
+static void spawn(const char *script, const char *broadcast) {
+    char *argv[] = { (char *)script, (char *)broadcast, NULL };
     pid_t pid;
-    if (posix_spawn(&pid, path, NULL, NULL, argv, environ) == 0) {
+    if (posix_spawn(&pid, script, NULL, NULL, argv, environ) == 0) {
         waitpid(pid, NULL, 0);
     }
 }
 
 static void changed(SCDynamicStoreRef store, CFArrayRef keys, void *info) {
-    (void)store;
+    char broadcast[64] = "";
+
     (void)keys;
-    spawn(info);
+
+    CFStringRef value = copy_broadcast(store);
+    if (value != NULL) {
+        if (!CFStringGetCString(value, broadcast, sizeof broadcast, kCFStringEncodingUTF8)) {
+            broadcast[0] = '\0';
+        }
+        CFRelease(value);
+    }
+
+    /* A lease renewal rewrites the same value; only real moves matter. */
+    if (seen && strcmp(broadcast, last) == 0) {
+        return;
+    }
+    seen = 1;
+    snprintf(last, sizeof last, "%s", broadcast);
+
+    spawn(info, broadcast);
 }
 
 int main(int argc, char **argv) {
@@ -59,6 +110,6 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    spawn(argv[1]); /* align with the current state, e.g. right after boot */
+    changed(store, NULL, argv[1]); /* align with the current state, e.g. after boot */
     dispatch_main();
 }
