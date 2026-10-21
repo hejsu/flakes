@@ -3,7 +3,7 @@
     ./cliproxyapi.nix
     ./parity.nix
     ./sops.nix
-    ./ucasnet.nix
+    ./ucasnet
     ./user.nix
     ./zoxide.nix
   ];
