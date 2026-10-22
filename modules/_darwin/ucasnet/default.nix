@@ -4,6 +4,10 @@
 let
   cfg = config.modules.services.ucasnet;
 
+  # Dorm subnet, in CIDR form. Compiled into the watcher, which compares en0's
+  # address against it to decide whether the reconciler has anything to do.
+  dormCidr = "10.211.192.0/21";
+
   # Listens on configd's dynamic store for State:/Network/Interface/en0/IPv4.
   # That key only holds address/mask/broadcast, so the callback fires exactly
   # when the interface really changed address -- no DNS/IPv6/Wi-Fi-scan churn.
@@ -17,7 +21,7 @@ let
 
     buildPhase = ''
       runHook preBuild
-      $CC -O2 -Wall -Wextra -o ucasnet-watcher $src \
+      $CC -O2 -Wall -Wextra -DDORM_CIDR='"${dormCidr}"' -o ucasnet-watcher $src \
         -framework SystemConfiguration -framework CoreFoundation
       runHook postBuild
     '';
@@ -30,10 +34,9 @@ let
   reconcile = pkgs.writeShellScript "ucasnet-reconcile" '' #bash
     set -eu
 
-    dorm=10.211.199.255
     anchor=com.apple/ucasnet-ra-guard
-
-    broadcast="''${1:-}"
+    mode="''${1:-other}"
+    address="''${2:-}"
 
     if ! /sbin/pfctl -s info | grep -q "Status: Enabled"; then
       /sbin/pfctl -e
@@ -43,7 +46,7 @@ let
     # the branch also means the table exists for the flush below.
     /sbin/pfctl -a $anchor -f /etc/pf.anchors/ucasnet-ra-guard
 
-    if [ "$broadcast" = "$dorm" ]; then
+    if [ "$mode" = dorm ]; then
       /sbin/pfctl -a $anchor -t rogue_routers -T replace fe80::1
 
       # Drop a default route the rogue router installed before pf took over.
@@ -51,12 +54,12 @@ let
         /sbin/route delete -inet6 -ifscope en0 default fe80::1%en0
       fi
 
-      echo "[$(date)] dorm subnet, blocking rogue fe80::1 RA"
+      echo "[$(date)] dorm subnet (''${address:-?}), blocking rogue fe80::1 RA"
 
       ${lib.getExe self.packages.bitsrun} -config "${config.sops.templates."bitsrun-config.yaml".path}"
     else
       /sbin/pfctl -a $anchor -t rogue_routers -T flush
-      echo "[$(date)] not the dorm subnet, guard cleared"
+      echo "[$(date)] outside the dorm subnet (''${address:-none}), guard cleared"
     fi
   '';
 in {

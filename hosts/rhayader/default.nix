@@ -54,7 +54,6 @@
     user.packages = with pkgs; [
       dash
 
-      self.packages.bitsrun
       self.packages.atst
     ];
 
