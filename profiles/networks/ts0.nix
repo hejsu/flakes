@@ -1,10 +1,15 @@
 # profiles/network/ts0 -- join this machine to a tailnet ("tailscale 0")
-{ config, ... }: {
-  # TODO: how to adjust singbox and tailscale?
+{ config, lib, ... }: {
   services.tailscale = {
     enable = true;
-    useRoutingFeatures = "none";
+    useRoutingFeatures = "client";
     openFirewall = true;
-    extraSetFlags = [ "--accept-dns=false" ];
+
+    extraSetFlags = [
+      "--accept-dns=true"
+      "--operator=${config.user.name}"
+    ];
+
+    serve.enable = lib.mkDefault (config.services.tailscale.serve.services != { });
   };
 }

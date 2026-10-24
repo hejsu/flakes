@@ -1,8 +1,8 @@
 # CLIProxyAPI -- darwin backend (launchd user agent).
 #
-# The switch and `configFile` come from the shared module in
-# modules/services/cliproxyapi.nix; its systemd half is dropped here by
-# modules/_darwin/parity.nix.
+# Only the `enable` switch is shared with modules/services/cliproxyapi.nix; the
+# systemd half there is NixOS-only. The config lives in ~/.config because the
+# agent runs as the logged-in user, which can read it by definition.
 { self, config, lib, ... }:
 
 let cfg = config.modules.services.cliproxyapi; in {
@@ -18,7 +18,7 @@ let cfg = config.modules.services.cliproxyapi; in {
         ProgramArguments = [
           (lib.getExe self.inputs.llm-agents.packages.cli-proxy-api)
           "-config"
-          "${cfg.configFile}"
+          "${config.home.configDir}/cli-proxy-api/config.yaml"
         ];
         RunAtLoad = true;
         KeepAlive = true;

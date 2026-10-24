@@ -17,11 +17,6 @@ let cfg = config.modules.shell.direnv; in {
         _nix_refresh_gcroots() { :; }
       '';
     };
-
-    nix.settings = {
-      keep-outputs = true;
-      keep-derivations = true;
-    };
   };
 }
 

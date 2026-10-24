@@ -24,7 +24,6 @@
     };
 
     services = {
-      cliproxyapi.enable = true;
       ucasnet.enable = true;
     };
   };

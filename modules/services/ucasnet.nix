@@ -15,7 +15,7 @@ let cfg = config.modules.services.ucasnet; in {
     sops.templates."bitsrun-config.yaml" = {
       restartUnits = [ "bitsrun.service" ];
       owner = config.user.name;
-      content = ''
+      content = '' #yaml
         form:
           domain: portal.ucas.ac.cn
           username: "${config.sops.placeholder."sep-username"}"
