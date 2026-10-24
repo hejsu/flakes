@@ -31,7 +31,7 @@
     };
   };
 
-  settings = { pkgs, ... }: {
+  settings = { config, pkgs, ... }: {
     user = {
       initialHashedPassword = "$6$8fKq2Zr9PmLxWvTy$o6W7AAu2IewTITRyufOT8R6i4WqeQxJLs.PZFUEHagBuOdxlAPhktx0OsLj.splluOmMsMmim0cGNjHrabxOW.";
     };
@@ -62,6 +62,43 @@
     environment.etc."gai.conf".text = ''
       precedence ::ffff:0:0/96 100
     '';
+
+    sops.secrets = {
+      "restic-password" = { };
+      "s3-access-key-id" = { };
+      "s3-secret-access-key" = { };
+    };
+
+    sops.templates."restic.env" = {
+      mode = "0400";
+      content = ''
+        RESTIC_PASSWORD="${config.sops.placeholder."restic-password"}"
+        AWS_ACCESS_KEY_ID="${config.sops.placeholder."s3-access-key-id"}"
+        AWS_SECRET_ACCESS_KEY="${config.sops.placeholder."s3-secret-access-key"}"
+      '';
+    };
+
+    services.restic.backups.cpa = {
+      initialize = true;
+      repository = "s3:https://s3.cstcloud.cn/echo-restic";
+      environmentFile = config.sops.templates."restic.env".path;
+      extraOptions = [ "s3.bucket-lookup=path" ];
+
+      paths = [
+        "/var/lib/private/cliproxyapi"
+        "/var/lib/private/cpa-usage-keeper"
+      ];
+
+      exclude = [
+        "/var/lib/private/cliproxyapi/auth/logs"
+        "/var/lib/private/cpa-usage-keeper/logs"
+      ];
+
+      pruneOpts = [ "--keep-daily 30" "--keep-weekly 12" "--keep-monthly 12" ];
+
+      runCheck = true;
+      checkOpts = [ "--read-data" ];
+    };
 
     system.stateVersion = "26.11";
   };

@@ -1,7 +1,19 @@
 # CLIProxyAPI.
 { self, config, lib, pkgs, ... }:
 
-let cfg = config.modules.services.cliproxyapi; in {
+let
+  cfg = config.modules.services.cliproxyapi;
+
+  seedConfig = (pkgs.formats.yaml { }).generate "cliproxyapi-seed.yaml" {
+    config-version = 8;
+    server = {
+      host = "127.0.0.1";
+      port = 8317;
+    };
+    oauth.auth-dir = "/var/lib/cliproxyapi/auth";
+    observability.usage.usage-statistics-enabled = true;
+  };
+in {
   options.modules.services.cliproxyapi = {
     enable = lib.mkEnableOption "CLIProxyAPI";
     tailsvc = lib.mkEnableOption "expose via Tailscale Serve";
@@ -65,7 +77,7 @@ let cfg = config.modules.services.cliproxyapi; in {
 
       preStart = '' #bash
         if [ ! -e "$STATE_DIRECTORY/config.yaml" ]; then
-          install -m 0600 ${./cliproxyapi.yaml} "$STATE_DIRECTORY/config.yaml"
+          install -m 0600 ${seedConfig} "$STATE_DIRECTORY/config.yaml"
         fi
       '';
 
@@ -102,7 +114,6 @@ let cfg = config.modules.services.cliproxyapi; in {
         APP_BASE_PATH = "/keeper";
         WORK_DIR = "/var/lib/cpa-usage-keeper";
         AUTH_ENABLED = "true";
-        TZ = config.time.timeZone or "Asia/Shanghai";
       };
 
       serviceConfig = {
