@@ -1,0 +1,194 @@
+#+title: 校园网 IPv6 断流
+#+date: 2026-10-26
+#+startup: overview indent
+
+* 问题
+
+echo 是跑在 Hyper-V 上的 NixOS 虚拟机，eth0 桥接校园网二层。地址分配和同网段互访一直
+正常，出公网时断时续。邻居表里有两条没有 lladdr 的 =router FAILED=；一台 Windows 的
+地址在正常和 FAILED 之间来回跳，MAC 在两台设备之间切换。
+
+主线：同一条二层上有多台设备在播 RA。=fe80::a:1= 只播报、不应答；另一台 H3C 用 DHCPv6
+把客户端放进一个没有 on-link 通告的前缀。客户端因此同时拿到一条走不通的默认路由和一个
+不可达的 DNS。处置是让客户端只信任一台路由器。
+
+* 设备
+
+全局地址都在 =2400:dd01:103a:1012::/64= 下，表里只写 IID；网关列的是链路本地地址。
+
+| Role      | MAC               | IPv6                      | Note            |
+|-----------+-------------------+---------------------------+-----------------|
+| echo      | 00:15:5d:02:65:00 | 215:5dff:fe02:6500        | Hyper-V guest   |
+| H3C-A     | 74:25:8a:00:f1:ab | fe80::7625:8aff:fe00:f1ab | SLAAC only      |
+| H3C-B     | 94:a6:d8:c0:f8:d5 | fe80::96a6:d8ff:fec0:f8d5 | DHCPv6, proxy   |
+| CMCC ONT  | ec:9b:2d:bf:f9:c1 | fe80::a:1                 | RA, no NS reply |
+| Xiaomi x3 | d4:53:2a:27:82:c2 | d653:2aff:fe27:82c2       | no RA           |
+| Windows   | 00:e2:69:6e:2c:ed | e90d:ff0d:faac:2f00       | 2 globals       |
+| Mac       | ee:90:74:7a:09:ea | 1c71:84d4:a9b7:2b99       | 2 globals       |
+| Phone     | 52:2b:09:77:f4:e1 | adf8:b8bb:5f4b:c3e6       | iPhone?         |
+
+* 证据
+
+** 邻居表
+
+网关的 IID 是 EUI-64，能反推 MAC。=d653:2aff:fe27:82c2= 把首字节的 U/L 位取反、中间补
+=ff:fe=，还原成 =d4:53:2a:27:82:c2=，对得上清单里的一台小米。=ee:90:74:7a:09:ea= 和
+=52:2b:09:77:f4:e1= 的首字节置了本地管理位，是随机 MAC，对应苹果设备。
+
+多数条目是 STALE，属于缓存的正常状态。有两条 FAILED 没有 lladdr。
+
+两个对不上的地方：带 =router= 标记的地址有 12 条，进默认路由表的只有 3 条；同一台
+Windows 的两个地址，一个挂 =00:e2:69:6e:2c:ed=，另一个挂 H3C 的 =94:a6:d8:c0:f8:d5=。
+后者说明有人在替它应答。
+
+** 抓包
+
+#+begin_src sh
+sudo tcpdump -ni eth0 -e -vv 'icmp6 and (ip6[40]==135 or ip6[40]==136)'
+#+end_src
+
+15 秒里有 251 条 NS、12 条 NA。108 条在询问 =fe80::a:1=，没有一条回答。echo 对那台
+Windows 的地址连发了三次单播 NS，间隔一秒（对应 retrans_time_ms=1000、
+mcast_solicit=3），全部没有回应：条目里缓存的是 H3C 的 MAC，探测帧发给了 H3C，真机
+收不到。
+
+** RA
+
+#+begin_src sh
+sudo nix shell nixpkgs#ndisc6 -c rdisc6 -m -v eth0
+#+end_src
+
+只有两台 H3C 应答：
+
+| Device                    | Prefix                   | M/O | Lifetime |
+|---------------------------+--------------------------+-----+----------|
+| fe80::7625:8aff:fe00:f1ab | 2400:dd01:103a:1012::/64 | No  | 1800     |
+| fe80::96a6:d8ff:fec0:f8d5 | none                     | Yes | 1800     |
+
+一台只做 SLAAC。另一台要求客户端使用 DHCPv6，却不告诉客户端任何前缀；它的地址池是
+=2400:dd01:103a:1017::/64=，=::6b0=、=::1176= 这类短 IID 是 DHCPv6 分配的特征。客户端
+不知道 1017 是 on-link，只能依赖网关代答 NDP。
+
+移动的光猫 =fe80::a:1= 只按自己的节奏广播，从不回应 RS；三台小米完全不播报，它们在
+邻居表里的 =router= 标记来自 NA 里的 R 位。
+
+** 默认路由
+
+#+begin_src sh
+ip -6 route get 2400:3200::1
+#+end_src
+
+几个不同的目的地全部走 H3C-B。三条默认路由权重相同，内核没有轮询，按 FIB 顺序固定挑了
+其中一条。
+
+** DNS
+
+=resolvectl status eth0= 的列表里有一个 =fe80::a:1%eth0=，来自 H3C 的 DHCPv6（O=1）。
+
+#+begin_src sh
+dig @fe80::a:1%eth0 example.com     # 2 秒超时
+dig @202.106.0.20 baidu.com         # 超时
+dig @119.29.29.29 baidu.com         # 12 毫秒
+#+end_src
+
+202.106.0.20 是 DHCP 下发列表里的另一台，同样不可达。测它之前要先停 sing-box，否则
+查询会被 fake-IP 接管。
+
+** 排除项
+
+隐私地址不是原因：use_tempaddr=0，=ip -6 addr= 里没有临时地址。
+
+* 处置
+
+两台 H3C 由学校管理，配置改不了，所以在客户端侧只信任一台路由器。
+
+** echo
+
+#+begin_src nix
+systemd.network.networks."10-eth0" = {
+  matchConfig.Name = "eth0";
+
+  networkConfig = {
+    DHCP = "ipv4";
+    IPv6AcceptRA = true;
+    IPv6PrivacyExtensions = false;
+    DNS = [ "210.77.16.1" "119.29.29.29" ];
+  };
+
+  dhcpV4Config.UseDNS = false;
+
+  ipv6AcceptRAConfig = {
+    RouterAllowList = [ "fe80::7625:8aff:fe00:f1ab" ];
+  };
+};
+#+end_src
+
+systemd-networkd 只接受 H3C-A 的 RA，其余路由器播报的前缀和 M/O 标志都被忽略。关掉
+DHCPv6 之后，=fe80::a:1= 那条死 DNS 不会再被学到；DNS 列表改为静态。
+
+** rhayader
+
+macOS 没有对应的开关，只能在包层面处理。pf anchor：
+
+#+begin_src text
+table <allowed_routers> persist
+
+pass  in quick on en0 inet6 proto ipv6-icmp from <allowed_routers>
+block in quick on en0 inet6 proto ipv6-icmp icmp6-type routeradv
+#+end_src
+
+reconcile 脚本在进入 =10.211.192.0/21= 时加载 anchor、把 H3C-A 的链路本地地址写进表，
+删掉 en0 上指向其它网关的默认路由，然后在后台执行一次 srun 登录；离开该网段时执行
+=pfctl -a … -F all=，规则和表一起清空。
+
+* 注意事项
+
+macOS 的 pf 与 OpenBSD 有两处差异：ICMPv6 类型名是 =routeradv=，不是 =routeradvert=；
+带 =icmp6-type= 的规则必须显式写 =inet6=。任一处写错，pfctl 会拒绝整个 anchor 文件，
+日志里只留一行 =Syntax error=。
+
+nix-darwin 只在 launchd 的 plist 变化时重启 job。如果某次改动只动了 anchor 文件本身，
+规则已经更新但 pf 里仍是旧的，需要手动重启：
+
+#+begin_src sh
+sudo launchctl kickstart -k system/org.nixos.ucas-ipv6-fix
+#+end_src
+
+* 验证
+
+#+begin_src sh
+# echo
+ip -6 route show default           # 只剩 via fe80::7625:8aff:fe00:f1ab
+resolvectl status eth0             # 没有 fe80::a:1
+
+# rhayader
+sudo pfctl -sr | grep com.apple    # anchor "com.apple/*"
+sudo pfctl -a com.apple/ucas-ipv6-fix -s rules
+sudo pfctl -a com.apple/ucas-ipv6-fix -t allowed_routers -T show
+#+end_src
+
+两个 anchor 规则的实际形态：
+
+#+begin_src text
+pass  in quick on en0 inet6 proto ipv6-icmp from <allowed_routers> to any keep state
+block drop in quick on en0 inet6 proto ipv6-icmp all icmp6-type routeradv
+#+end_src
+
+* 遗留
+
+白名单意味着 H3C-A 不在时两台机器都会失去 IPv6。失败是干净的：没有默认路由，不会黑洞，
+应用按 =gai.conf= 回落 IPv4。
+
+srun 只在进入网段时登录一次，会话过期后不会自动重登，要等下一次 IP 变化。
+
+这次只挡了 RA。若之后邻居表仍在真机 MAC 和网关 MAC 之间跳，说明 NDP 代答还在发生，
+那时再考虑把整台设备屏蔽。
+
+* 附：更早的一次独立故障
+
+Hyper-V 外部虚拟交换机桥接时，宿主机 Realtek 2.5GbE 网卡的 NS 减负（NS Offload）会在
+硬件层拦截发往虚拟机的组播 NS，比对发现不是自己的地址就直接丢弃，网关因此永远解析不到
+虚拟机的 MAC。表现是重置网卡后能通 20 到 30 秒，随后准时断流。
+
+在宿主机上关掉该网卡的 NS 减负即可（设备管理器 → 网卡属性 → 高级）。这是另一条故障链，
+与本次的 RA 问题互不替代。
