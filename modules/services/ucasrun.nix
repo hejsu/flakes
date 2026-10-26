@@ -1,9 +1,9 @@
-# UCAS (University of Chinese Academy of Sciences) campus network environment.
+# UCAS (University of Chinese Academy of Sciences) srun campus network login.
 { self, config, lib, ... }:
 
-let cfg = config.modules.services.ucasnet; in {
-  options.modules.services.ucasnet = {
-    enable = lib.mkEnableOption "UCAS campus network environment (Srun login & IPv6 RA guard)";
+let cfg = config.modules.services.ucasrun; in {
+  options.modules.services.ucasrun = {
+    enable = lib.mkEnableOption "UCAS campus network login (BitSrunLoginGo)";
   };
 
   config = lib.mkIf cfg.enable {
@@ -15,7 +15,7 @@ let cfg = config.modules.services.ucasnet; in {
     sops.templates."bitsrun-config.yaml" = {
       restartUnits = [ "bitsrun.service" ];
       owner = config.user.name;
-      content = '' #yaml
+      content = ''
         form:
           domain: portal.ucas.ac.cn
           username: "${config.sops.placeholder."sep-username"}"

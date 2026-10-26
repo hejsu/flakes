@@ -15,7 +15,6 @@
 
     services = {
       ssh.enable = true;
-      ucasnet.enable = true;
       singbox.enable = true;
       cliproxyapi = {
         enable = true;

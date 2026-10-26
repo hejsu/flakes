@@ -1,5 +1,5 @@
 /*
- * ucasnet-watcher -- notify a script when en0 enters or leaves the dorm subnet.
+ * ucas-ipv6-fix-watcher -- notify a script when en0 enters or leaves the dorm subnet.
  *
  * Watches State:/Network/Interface/en0/IPv4 in configd's dynamic store. That
  * key holds only Addresses/BroadcastAddresses/SubnetMasks, so it changes when
@@ -13,7 +13,7 @@
  * foreign networks spawns nothing. Inside the dorm the address stays part of
  * the key, because a new lease there can invalidate the portal session.
  *
- * Usage: ucasnet-watcher <script>
+ * Usage: ucas-ipv6-fix-watcher <script>
  *
  * The script is spawned with the current mode and address as argv[1] and
  * argv[2], and runs once at startup so a reboot always re-applies the state.
@@ -40,7 +40,7 @@ static char last[80];
 static int seen;
 static int booting = 1;
 
-/* True when address falls inside DORM_CIDR, e.g. "10.211.192.0/21". */
+/* True when address falls inside DORM_CIDR, e.g. "192.168.77.0/24". */
 static int in_dorm(const char *address) {
     char cidr[sizeof DORM_CIDR];
     char *slash;
@@ -113,23 +113,23 @@ static void spawn(const char *script, const char *mode, const char *address) {
 
         localtime_r(&now, &tm);
         strftime(stamp, sizeof stamp, "%H:%M:%S", &tm);
-        printf("ucasnet-watcher: %s boot %s %s\n", stamp, mode,
+        printf("ucas-ipv6-fix-watcher: %s boot %s %s\n", stamp, mode,
                address[0] != '\0' ? address : "(no address)");
         fflush(stdout);
     }
 
     rc = posix_spawn(&pid, script, NULL, NULL, argv, environ);
     if (rc != 0) {
-        fprintf(stderr, "ucasnet-watcher: spawn %s: %s\n", script, strerror(rc));
+        fprintf(stderr, "ucas-ipv6-fix-watcher: spawn %s: %s\n", script, strerror(rc));
         return;
     }
     while (waitpid(pid, &status, 0) == -1 && errno == EINTR) {
     }
     if (WIFSIGNALED(status)) {
-        fprintf(stderr, "ucasnet-watcher: %s script killed by signal %d\n", tag,
+        fprintf(stderr, "ucas-ipv6-fix-watcher: %s script killed by signal %d\n", tag,
                 WTERMSIG(status));
     } else if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-        fprintf(stderr, "ucasnet-watcher: %s script exited %d\n", tag,
+        fprintf(stderr, "ucas-ipv6-fix-watcher: %s script exited %d\n", tag,
                 WEXITSTATUS(status));
     }
 }
@@ -170,9 +170,9 @@ int main(int argc, char **argv) {
 
     SCDynamicStoreContext context = { 0, argv[1], NULL, NULL, NULL };
     SCDynamicStoreRef store =
-        SCDynamicStoreCreate(NULL, CFSTR("org.nixos.ucasnet"), changed, &context);
+        SCDynamicStoreCreate(NULL, CFSTR("org.nixos.ucas-ipv6-fix"), changed, &context);
     if (store == NULL) {
-        fprintf(stderr, "ucasnet-watcher: SCDynamicStoreCreate failed\n");
+        fprintf(stderr, "ucas-ipv6-fix-watcher: SCDynamicStoreCreate failed\n");
         return 1;
     }
 
@@ -180,11 +180,11 @@ int main(int argc, char **argv) {
     CFArrayRef patterns =
         CFArrayCreate(NULL, (const void **)&pattern, 1, &kCFTypeArrayCallBacks);
     if (!SCDynamicStoreSetNotificationKeys(store, NULL, patterns)) {
-        fprintf(stderr, "ucasnet-watcher: SCDynamicStoreSetNotificationKeys failed\n");
+        fprintf(stderr, "ucas-ipv6-fix-watcher: SCDynamicStoreSetNotificationKeys failed\n");
         return 1;
     }
     if (!SCDynamicStoreSetDispatchQueue(store, dispatch_get_main_queue())) {
-        fprintf(stderr, "ucasnet-watcher: SCDynamicStoreSetDispatchQueue failed\n");
+        fprintf(stderr, "ucas-ipv6-fix-watcher: SCDynamicStoreSetDispatchQueue failed\n");
         return 1;
     }
 

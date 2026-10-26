@@ -3,7 +3,7 @@
     ./cliproxyapi.nix
     ./parity.nix
     ./sops.nix
-    ./ucasnet
+    ./ucas-ipv6-fix
     ./user.nix
     ./zoxide.nix
   ];

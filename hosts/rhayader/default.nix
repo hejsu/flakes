@@ -24,7 +24,7 @@
     };
 
     services = {
-      ucasnet.enable = true;
+      ucas-ipv6-fix.enable = true;
     };
   };
 
