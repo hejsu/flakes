@@ -22,12 +22,7 @@ let cfg = config.modules.xdg; in {
       NPM_CONFIG_CACHE = "${config.home.cacheDir}/npm";
       NODE_REPL_HISTORY = "${config.home.dataDir}/node/repl_history";
 
-      # Pi Coding Agent
-      PI_CODING_AGENT_DIR = "${config.home.configDir}/pi/agent";
-      PI_CODING_AGENT_SESSION_DIR = "${config.home.dataDir}/pi/sessions";
-
-      CODEX_HOME = "${config.home.configDir}/codex";
-      GEMINI_CLI_HOME = "${config.home.configDir}/gemini";
+      # GitHub Copilot (still used by VS Code)
       COPILOT_HOME = "${config.home.configDir}/copilot";
 
       # Toolchains / Dev
@@ -38,6 +33,12 @@ let cfg = config.modules.xdg; in {
       SQLITE_HISTORY = "${config.home.stateDir}/sqlite_history";
       WGETRC = "${config.home.configDir}/wgetrc";
     };
+
+    # macOS /etc/zshrc hardcodes HISTFILE to ~/.zsh_history; override it here.
+    home.configFile."zsh/.zshrc".text = ''
+      HISTFILE="${config.home.stateDir}/zsh/history"
+      mkdir -p "${config.home.stateDir}/zsh"
+    '';
 
     home.configFile."wgetrc".text = ''
       hsts-file = ${config.home.cacheDir}/wget-hsts

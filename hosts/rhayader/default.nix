@@ -40,9 +40,7 @@
 
     launchd.user.envVariables = {
       SSH_AUTH_SOCK = "${config.home.dir}/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh";
-      GEMINI_CLI_HOME = "${config.home.configDir}/gemini";
       COPILOT_HOME = "${config.home.configDir}/copilot";
-      CODEX_HOME = "${config.home.configDir}/codex";
     };
 
     home.configFile = {

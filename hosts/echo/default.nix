@@ -35,12 +35,12 @@
       initialHashedPassword = "$6$8fKq2Zr9PmLxWvTy$o6W7AAu2IewTITRyufOT8R6i4WqeQxJLs.PZFUEHagBuOdxlAPhktx0OsLj.splluOmMsMmim0cGNjHrabxOW.";
     };
 
+    programs.nix-ld.enable = true;
+
     networking = {
       useNetworkd = true;
       useDHCP = false;
     };
-
-    programs.nix-ld.enable = true;
 
     systemd.network = {
       enable = true;
@@ -113,7 +113,7 @@
         configurationLimit = 10;
       };
     };
-  
+
     fileSystems."/" = {
       device = "/dev/disk/by-uuid/7855b7f2-2287-42bd-b0cd-21846731f6ae";
       fsType = "btrfs";
