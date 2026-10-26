@@ -25,6 +25,7 @@
 
     services = {
       ucas-ipv6-fix.enable = true;
+      ucasrun.enable = true;
     };
   };
 

@@ -16,6 +16,7 @@
     services = {
       ssh.enable = true;
       singbox.enable = true;
+      ucasrun.enable = true;
       cliproxyapi = {
         enable = true;
         tailsvc = true;
@@ -49,12 +50,21 @@
 
     systemd.network.networks."10-eth0" = {
       matchConfig.Name = "eth0";
+
       networkConfig = {
-        DHCP = "yes";
-        IPv6PrivacyExtensions = "yes";
+        DHCP = "ipv4";
+        IPv6AcceptRA = true;
+        IPv6PrivacyExtensions = false;
+        DNS = [
+          "210.77.16.1"
+          "119.29.29.29"
+        ];
       };
+
+      dhcpV4Config.UseDNS = false;
+
       ipv6AcceptRAConfig = {
-        RouterDenyList = [ "fe80::1" ];
+        RouterAllowList = [ "fe80::7625:8aff:fe00:f1ab" ];
       };
     };
 
