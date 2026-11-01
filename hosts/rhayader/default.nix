@@ -21,6 +21,7 @@
     dev = {
       typst.enable = true;
       python.enable = true;
+      node.enable = true;
     };
 
     services = {
@@ -29,7 +30,7 @@
     };
   };
 
-  settings = { self, lib, config, pkgs, ... }: {
+  settings = { self, config, pkgs, ... }: {
     time.timeZone = "Asia/Shanghai";
 
     system.stateVersion = 6;
@@ -56,6 +57,8 @@
 
     user.packages = with pkgs; [
       dash
+      mtr
+      nil
 
       self.packages.atst
     ];
