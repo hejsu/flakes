@@ -47,6 +47,11 @@
     home.configFile = {
       "kitty".source = "${self.configDir}/kitty";
       "zed/settings.json".source = "${self.configDir}/zed/settings.json";
+
+      "emacs/early-init.el".source = "${self.configDir}/emacs/early-init.el";
+      "emacs/init.el".source = "${self.configDir}/emacs/init.el";
+      "emacs/cfg".source = "${self.configDir}/emacs/cfg";
+      "emacs/straight-versions.el".source = "${self.configDir}/emacs/straight-versions.el";
     };
 
     user.packages = with pkgs; [
@@ -56,6 +61,8 @@
     ];
 
     homebrew = {
+      taps = [ "d12frosted/emacs-plus" ];
+
       brews = [
         "docker"
         "docker-compose"
@@ -65,6 +72,8 @@
       ];
 
       casks = [
+        "emacs-plus-app"
+
         "kitty"
         "zed"
         "wechat"

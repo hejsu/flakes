@@ -1,0 +1,77 @@
+#+title: Addons
+#+auto_tangle: t
+#+PROPERTY: header-args :tangle ~/.config/emacs/tangle/addons.el
+
+#+begin_src emacs-lisp :exports none
+  ;;; -*- lexical-binding: t -*-
+#+end_src
+
+* Git integration with magit & diff-hl & smerge
+
+To manage the git repository, use builtin package ~vc~.
+
+#+begin_src emacs-lisp
+  (use-package magit
+    :commands magit-status)
+
+  (use-package diff-hl
+    :commands (diff-hl-mode diff-hl-dired-mode))
+#+end_src
+
+Key bindings
+
+#+begin_src emacs-lisp
+  (keymap-set global-map "C-x g" #'magit-status)
+#+end_src
+
+* EAT
+#+begin_src emacs-lisp
+  (use-package eat
+    :straight (:type git
+               :host codeberg
+               :repo "akib/emacs-eat"
+               :files ("*.el" ("term" "term/*.el") "*.texi"
+                       "*.ti" ("terminfo/e" "terminfo/e/*")
+                       ("terminfo/65" "terminfo/65/*")
+                       ("integration" "integration/*")
+                       (:exclude ".dir-locals.el" "*-tests.el"))))
+#+end_src
+
+** Buffer window rules
+
+#+begin_src emacs-lisp
+  (add-to-list 'display-buffer-alist
+               '("\\*eat\\*"
+                 (display-buffer-in-side-window)
+                 (window-height . 0.25)
+                 (side . bottom)
+                 (slot . -1)))
+#+end_src
+
+** Q to quit after process exit
+
+#+begin_src emacs-lisp
+  (add-hook 'eat-exit-hook 'view-mode)
+#+end_src
+
+** Eshell support
+#+begin_src emacs-lisp
+  (add-hook 'eshell-load-hook #'eat-eshell-mode)
+  (add-hook 'eshell-load-hook #'eat-eshell-visual-command-mode)
+#+end_src
+
+** Integration with Meow
+Use ~char~ mode in ~INSERT~ state, and ~emacs~ mode in ~NORMAL~ state.  When
+switching to ~INSERT~ state, move the cursor to the end of buffer.
+
+#+begin_src emacs-lisp
+  (defun eat-meow-setup ()
+    (add-hook 'meow-normal-mode-hook 'eat-emacs-mode nil t)
+    (add-hook 'meow-insert-mode-hook 'eat-char-mode nil t))
+
+  (with-eval-after-load "meow"
+    (with-eval-after-load "eat"
+      (keymap-set eat-char-mode-map "C-S-v" 'eat-yank)
+      (advice-add 'eat-semi-char-mode :after 'eat-emacs-mode)
+      (add-hook 'eat-mode-hook 'eat-meow-setup)))
+#+end_src

@@ -1,0 +1,109 @@
+#+title: Programming
+#+auto_tangle: t
+#+PROPERTY: header-args :tangle ~/.config/emacs/tangle/programming.el
+
+#+begin_src emacs-lisp
+  ;;; -*- lexical-binding: t -*-
+#+end_src
+
+* Treesit
+
+#+begin_src emacs-lisp
+  (setq treesit-language-source-alist
+        '((bash "https://github.com/tree-sitter/tree-sitter-bash")
+          (cmake "https://github.com/uyha/tree-sitter-cmake")
+          (css "https://github.com/tree-sitter/tree-sitter-css")
+          (elisp "https://github.com/Wilfred/tree-sitter-elisp")
+          (go "https://github.com/tree-sitter/tree-sitter-go")
+          (html "https://github.com/tree-sitter/tree-sitter-html")
+          (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
+          (json "https://github.com/tree-sitter/tree-sitter-json")
+          (make "https://github.com/alemuller/tree-sitter-make")
+          (markdown "https://github.com/ikatyang/tree-sitter-markdown")
+          (python "https://github.com/tree-sitter/tree-sitter-python")
+          (toml "https://github.com/tree-sitter/tree-sitter-toml")
+          (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
+          (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
+          (yaml "https://github.com/ikatyang/tree-sitter-yaml")
+          (clojure "https://github.com/sogaiu/tree-sitter-clojure")
+          (rust "https://github.com/tree-sitter/tree-sitter-rust")))
+#+end_src
+
+Lower font lock level
+
+#+begin_src emacs-lisp
+  (setq treesit-font-lock-level 2)
+#+end_src
+
+* Hideshow
+
+#+begin_src emacs-lisp
+  (add-hook 'prog-mode-hook 'hs-minor-mode)
+#+end_src
+
+* Force save file
+#+begin_src emacs-lisp
+  (defun save-buffer-always ()
+    "Save the buffer even if it is not modified."
+    (interactive)
+    (set-buffer-modified-p t)
+    (save-buffer))
+
+  (keymap-global-set "C-c w" #'save-buffer-always)
+#+end_src
+
+* Lisp Parenthese
+
+** Paredit
+#+begin_src emacs-lisp
+  (use-package paredit
+    :hook ((clojure-mode clojure-ts-mode emacs-lisp-mode) . paredit-mode)
+    :config (keymap-unset paredit-mode-map "M-s"))
+#+end_src
+
+* Nix
+
+#+begin_src emacs-lisp
+  (use-package nix-mode
+    :mode "\\.nix\\'")
+#+end_src
+
+** nixpkgs-fmt
+#+begin_src emacs-lisp
+  (use-package nixpkgs-fmt
+    :after nix-mode
+    :hook (nix-mode . nixpkgs-fmt-on-save-mode)
+    :bind (:map nix-mode-map ("C-c C-f" . nixpkgs-fmt-buffer)))
+#+end_src
+
+* YAML
+#+begin_src emacs-lisp
+  (use-package yaml-mode
+    :mode "\\.\\(e?ya?\\|ra\\)ml\\'"
+    :magic ("^%YAML\\s-+[0-9]+\\.[0-9]+\\(\\s-+#\\|\\s-*$\\)" . yaml-mode))
+#+end_src
+
+* Xref configuration
+
+#+begin_src emacs-lisp
+  (setq xref-show-definitions-function 'xref-show-definitions-completing-read)
+#+end_src
+
+* Compilation mode support
+
+#+begin_src emacs-lisp
+  (setq compile-command "")
+
+  (require 'ansi-color)
+
+  (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
+#+end_src
+
+* String inflection
+
+Cycle cases for symbol.
+
+#+begin_src emacs-lisp
+  ;; 先不用，需要时取消注释并加键位
+  ;; (use-package string-inflection)
+#+end_src

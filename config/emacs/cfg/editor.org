@@ -1,0 +1,555 @@
+#+title: Editor Basics
+#+auto_tangle: t
+#+PROPERTY: header-args :tangle ~/.config/emacs/tangle/editor.el
+
+#+begin_src emacs-lisp :exports none
+  ;;; -*- lexical-binding: t -*-
+#+end_src
+
+* Package management
+
+** Straight
+
+Straight.el is used for package management.
+
+*** Disable startup check
+
+#+begin_src emacs-lisp
+  (setq straight-check-for-modifications '(check-on-save))
+#+end_src
+
+*** Disable native compilation
+
+#+begin_src emacs-lisp
+  (setq straight-disable-native-compile nil)
+#+end_src
+
+*** Key bindings
+
+#+begin_src emacs-lisp
+  (defvar-keymap straight-keymap
+    :doc "Straight.el commands"
+    "c" #'straight-check-package
+    "C" #'straight-check-all
+    "p" #'straight-pull-package
+    "P" #'straight-pull-all
+    "b" #'straight-rebuild-package
+    "B" #'straight-rebuild-all
+    "v" #'straight-freeze-versions)
+
+  (keymap-set global-map "C-c S" straight-keymap)
+#+end_src
+
+* Better defaults
+
+#+begin_src emacs-lisp
+  ;;; Create for backup and autosave
+  ;; Under the XDG state directory so they stay off the home directory.
+  (require 'xdg)
+  (let ((state (expand-file-name "emacs" (xdg-state-home))))
+    (make-directory (expand-file-name "backups" state) t)
+    (make-directory (expand-file-name "autosaves" state) t))
+
+  (setq-default
+
+   ;; Disable splash screen
+   inhibit-splash-screen t
+
+   ;; Don't display comp warnings
+   warning-suppress-log-types '((comp))
+   ;; Don't create lockfiles
+   create-lockfiles nil
+
+   ;; prefer UTF8
+   buffer-file-coding-system 'utf-8-unix
+   default-file-name-coding-system 'utf-8-unix
+   default-keyboard-coding-system 'utf-8-unix
+   default-process-coding-system '(utf-8-unix . utf-8-unix)
+   default-sendmail-coding-system 'utf-8-unix
+   default-terminal-coding-system 'utf-8-unix
+
+   ;; Add newline at bottom of file
+   require-final-newline t
+
+   ;; Set backup directory
+   backup-directory-alist
+   `(("." . ,(expand-file-name "emacs/backups" (xdg-state-home))))
+   auto-save-file-name-transforms
+   `((".*" ,(expand-file-name "emacs/autosaves/" (xdg-state-home)) t))
+
+   backup-by-copying t
+   delete-old-versions t
+   kept-new-versions 6
+   kept-old-versions 2
+   version-control t
+
+   tramp-backup-directory-alist backup-directory-alist
+   tramp-auto-save-directory (expand-file-name "emacs/autosaves/"
+                                               (xdg-state-home))
+
+   ;; Skip prompt for xref find definition
+   xref-prompt-for-identifier nil
+
+   ;; Don't wait for keystrokes display
+   echo-keystrokes 0.01
+
+   ;; Disable margin for overline and underline
+   overline-margin 0
+   underline-minimum-offset 0
+
+   ;; Allow resizing frame by pixels
+   frame-resize-pixelwise t
+
+   ;; Better scroll behavior
+   mouse-wheel-scroll-amount '(1 ((shift) . 1) ((control) . nil))
+   mouse-wheel-progressive-speed nil
+
+   ;; Scroll line by line instead of recentring the whole window when the
+   ;; cursor reaches the edge.  101 means "never recentre".
+   scroll-conservatively 101
+   scroll-margin 3
+
+   ;; Disable copy region blink
+   copy-region-blink-delay 0
+
+   ;; Use short answer when asking yes or no
+   read-answer-short t
+
+   ;; Always follow link
+   vc-follow-symlinks t
+
+   ;; Disable ring bell
+   ring-bell-function 'ignore
+
+   ;; Mouse yank at current point
+   mouse-yank-at-point t
+
+   ;; DWIM target for dired
+   ;; Automatically use another dired buffer as target for copy/rename
+   dired-dwim-target t
+
+   ;; Use spaces instead of tab
+   indent-tabs-mode nil
+
+   ;; Don't echo multiline eldoc
+   eldoc-echo-area-use-multiline-p nil
+
+   ;; No cursor blink in TUI
+   visible-cursor nil
+
+   ;; Counter for isearch
+   isearch-lazy-count t
+   isearch-lazy-highlight t
+
+   compilation-scroll-output 'first-error
+
+   ;; Flatten imenu for easy searching
+   imenu-flatten t
+
+   ;; For scrolling performance
+   fast-but-imprecise-scrolling t
+   inhibit-compacting-font-caches t
+   auto-window-vscroll nil
+
+   ;; preserve scrolling position
+   scroll-preserve-screen-position t
+
+   ;; Wider fill column
+   fill-column 100
+
+   show-paren-style 'mixed
+
+   mode-line-compact t
+
+   ;; Skip fontification while keyboard input is pending, so typing is not
+   ;; blocked by redisplay work.
+   redisplay-skip-fontification-on-input t
+
+   ;; Cheaper bidi scanning.  The supported alternative to setting
+   ;; `bidi-display-reordering' to nil, which the Emacs manual forbids.
+   bidi-inhibit-bpa t
+
+   ;; Borrowed from Doom: skip the second case-insensitive pass over
+   ;; `auto-mode-alist', and skip rendering cursors/regions in unfocused
+   ;; windows.
+   auto-mode-case-fold nil
+   cursor-in-non-selected-windows nil
+   highlight-nonselected-windows nil
+
+   ;; Read more from subprocesses per chunk (default 4kb).
+   read-process-output-max (* 64 1024)
+
+   ;; Accept y/n instead of spelling out "yes"/"no".
+   use-short-answers t
+
+   ;; Highlight the matching paren sooner (default 0.1).
+   show-paren-delay 0.05)
+
+  (when window-system
+    (scroll-bar-mode -1)
+    ;; Pixel-granular scrolling for trackpads and precise mice.
+    (pixel-scroll-precision-mode 1))
+
+  (global-subword-mode 1)
+  (diminish 'subword-mode)
+
+  (blink-cursor-mode -1)
+
+  (savehist-mode)
+  (recentf-mode 1)
+  (global-auto-revert-mode 1)
+
+  (add-hook 'prog-mode-hook
+            (lambda ()
+              (add-hook 'before-save-hook #'delete-trailing-whitespace nil t)))
+
+  (setq jit-lock-defer-time 0)
+#+end_src
+
+* Garbage collection
+
+`gcmh' raises the threshold while Emacs is in use and reclaims when it goes
+idle, so GC pauses land between keystrokes rather than during them.  The `auto'
+idle delay adapts to how busy the session is.
+
+#+begin_src emacs-lisp
+  (use-package gcmh
+    :demand t
+    :init
+    (setq gcmh-idle-delay 'auto          ; default is a fixed 15s
+          gcmh-auto-idle-delay-factor 10
+          gcmh-high-cons-threshold (* 64 1024 1024))  ; 64 MB
+    ;; On at startup, not during init: early-init already raised the threshold,
+    ;; and letting gcmh lower it mid-init would resume collecting.
+    :hook (emacs-startup . gcmh-mode)
+    :config
+    (diminish 'gcmh-mode))
+#+end_src
+
+* Server
+
+** Make server-start command avaliable
+
+#+begin_src emacs-lisp
+  (autoload 'server-start "server" nil t)
+#+end_src
+
+* Buffer window rules
+
+** Toggle side windows
+
+#+begin_src emacs-lisp
+  (keymap-set global-map "<f6>" 'window-toggle-side-windows)
+#+end_src
+
+** Rules for builtin modes
+
+#+begin_src emacs-lisp
+  (setq display-buffer-alist
+        '(("\\*[Hh]elp\\*"
+           (display-buffer-in-side-window)
+           (window-width . 70)
+           (side . right)
+           (slot . 0))
+          ("\\*Compilation\\*"
+           (display-buffer-in-side-window)
+           (window-height . 0.25)
+           (side . bottom)
+           (slot . 0))
+          ("\\*Completions\\*"
+           (display-buffer-in-side-window)
+           (window-height . 0.25)
+           (side . bottom)
+           (slot . 1))))
+#+end_src
+
+* Meow
+
+#+begin_src emacs-lisp
+  (use-package meow
+    :demand t
+    :init (setq meow-keypad-describe-keymap-function nil)
+    :config
+    ;; hide lighters
+    (diminish 'meow-normal-mode)
+    (diminish 'meow-motion-mode)
+    (diminish 'meow-insert-mode)
+    (diminish 'meow-keypad-mode)
+    (diminish 'meow-beacon-mode))
+#+end_src
+
+** Key bindings
+
+#+begin_src emacs-lisp
+  (defun meow-setup ()
+    (meow-normal-define-key
+     '("'" . repeat)
+     '("," . meow-inner-of-thing)
+     '("." . meow-bounds-of-thing)
+     '(";" . meow-reverse)
+     '("[" . meow-beginning-of-thing)
+     '("]" . meow-end-of-thing)
+     '("-" . negative-argument)
+     '("0" . meow-expand-0)
+     '("1" . meow-expand-1)
+     '("2" . meow-expand-2)
+     '("3" . meow-expand-3)
+     '("4" . meow-expand-4)
+     '("5" . meow-expand-5)
+     '("6" . meow-expand-6)
+     '("7" . meow-expand-7)
+     '("8" . meow-expand-8)
+     '("9" . meow-expand-9)
+     '("a" . meow-append)
+     '("A" . meow-open-below)
+     '("b" . meow-back-word)
+     '("B" . meow-back-symbol)
+     '("c" . meow-change)
+     '("d" . meow-delete)
+     '("D" . meow-backward-delete)
+     '("e" . meow-next-word)
+     '("E" . meow-next-symbol)
+     '("f" . meow-find)
+     '("g" . meow-cancel-selection)
+     '("G" . meow-grab)
+     '("h" . meow-left)
+     '("H" . meow-left-expand)
+     '("i" . meow-insert)
+     '("I" . meow-open-above)
+     '("j" . meow-next)
+     '("J" . meow-next-expand)
+     '("k" . meow-prev)
+     '("K" . meow-prev-expand)
+     '("l" . meow-right)
+     '("L" . meow-right-expand)
+     '("m" . meow-join)
+     '("n" . meow-search)
+     '("o" . meow-block)
+     '("O" . meow-to-block)
+     '("p" . meow-yank)
+     '("q" . meow-quit)
+     '("Q" . meow-goto-line)
+     '("r" . meow-replace)
+     '("R" . meow-swap-grab)
+     '("s" . meow-kill)
+     '("t" . meow-till)
+     '("u" . meow-undo)
+     '("U" . meow-undo-in-selection)
+     '("v" . meow-visit)
+     '("w" . meow-mark-word)
+     '("W" . meow-mark-symbol)
+     '("x" . meow-line)
+     '("X" . meow-goto-line)
+     '("y" . meow-save)
+     '("Y" . meow-sync-grab)
+     '("z" . meow-pop-selection)
+     '("<escape>" . ignore))
+    (meow-motion-define-key
+     '("j" . meow-next)
+     '("k" . meow-prev)
+     '("<escape>" . ignore)))
+#+end_src
+
+** Basic configurations
+#+begin_src emacs-lisp
+  ;; custom variables
+  (setq meow-esc-delay 0.001)
+  (meow-thing-register 'angle
+                     '(pair ("<") (">"))
+                     '(pair ("<") (">")))
+  (add-to-list 'meow-char-thing-table
+               '(?h . angle))
+
+  (setq meow-select-on-change nil
+        meow-beacon-auto-deactivate t)
+
+  ;; Cap the numbered hints meow paints for matching positions.  The default
+  ;; is 30 per type, which is noisy on a large buffer; `1'-`9' still jump.
+  (setq meow-expand-hint-counts
+        '((word . 5) (line . 5) (block . 5)
+          (find . 5) (till . 5) (symbol . 5)))
+
+  (meow-setup)
+  (meow-setup-indicator)
+  (unless (bound-and-true-p meow-global-mode)
+    (meow-global-mode 1))
+#+end_src
+
+** Use shorten indicators
+
+#+begin_src emacs-lisp
+  (setq meow-replace-state-name-list
+        '((normal . "N")
+          (beacon . "B")
+          (insert . "I")
+          (motion . "M")
+          (keypad . "K")))
+#+end_src
+
+** Allow all C-x <letter> for leader
+
+#+begin_src emacs-lisp
+  (setq meow-keypad-leader-dispatch "C-x")
+#+end_src
+
+** Tree-sitter integration
+
+#+begin_src emacs-lisp
+  (use-package meow-tree-sitter
+    :demand t
+    :config
+    (defvar meow-tree-sitter-registered nil)
+    (unless meow-tree-sitter-registered
+      (meow-tree-sitter-register-defaults)
+      (setq meow-tree-sitter-registered t)))
+#+end_src
+
+* Parenthesis
+
+** Builtin electric pair
+
+#+begin_src emacs-lisp
+  (add-hook 'prog-mode-hook 'electric-pair-local-mode)
+  (add-hook 'conf-mode-hook 'electric-pair-local-mode)
+#+end_src
+
+* Line numbers with display-line-numbers-mode
+
+#+begin_src emacs-lisp
+  (global-display-line-numbers-mode 1)
+
+  (keymap-set global-map "C-x N" 'display-line-numbers-mode)
+#+end_src
+
+** Line number rendering
+
+A fixed minimum width stops the margin from resizing when the counter
+crosses 10, 100, ...; it widens once more past 999.
+
+#+begin_src emacs-lisp
+  (setq-default display-line-numbers-width 3)
+#+end_src
+
+* Minibuffer completion reading
+
+** Vertico
+
+#+begin_src emacs-lisp
+  (use-package vertico
+    :demand t
+    :init (setq completion-styles
+                '(emacs22 partial-completion substring initials flex))
+    :bind (:map vertico-map
+            ("C-s"   . vertico-next)
+            ("C-r"   . vertico-previous)
+            ("RET"   . vertico-directory-enter)
+            ("DEL"   . vertico-directory-delete-char)
+            ("M-DEL" . vertico-directory-delete-word))
+    :hook (rfn-eshadow-update-overlay . vertico-directory-tidy)
+    :config
+    (require 'vertico-directory)
+    (vertico-mode))
+#+end_src
+
+* Completion at point
+
+** Completion Preview Mode
+
+#+begin_src emacs-lisp
+  (global-completion-preview-mode 1)
+
+  (keymap-set global-map "M-i" 'complete-symbol)
+  (keymap-set global-map "M-n" 'completion-preview-complete)
+  (keymap-set completion-preview-active-mode-map "M-n" 'completion-preview-next-candidate)
+  (keymap-set completion-preview-active-mode-map "M-p" 'completion-preview-prev-candidate)
+  (keymap-set completion-in-region-mode-map "M-v" 'switch-to-completions)
+  (keymap-set completion-in-region-mode-map "M-g M-c" 'switch-to-completions)
+  (keymap-set completion-in-region-mode-map "M-n" 'minibuffer-next-completion)
+  (keymap-set completion-in-region-mode-map "M-p" 'minibuffer-previous-completion)
+#+end_src
+
+* Templating
+
+** yasnippet
+
+Expand template with =TAB=. Jump between the placeholders with =TAB= and =S-TAB=.
+
+#+begin_src emacs-lisp
+  (use-package yasnippet
+    :demand t
+    :init (setq yas-verbosity 1)   ; 没装 snippet 包，别每次启动提示
+    :config
+    (yas-global-mode 1)
+    (diminish 'yas-minor-mode))
+#+end_src
+
+* Project management
+
+** project.el
+
+To find files/buffers and apply commands on project, use builtin package ~project~.
+
+#+begin_src emacs-lisp
+  (require 'project)
+
+  (setq project-switch-commands '((project-find-file "Find file")
+                                  (project-find-regexp "Find regexp")
+                                  (project-dired "Dired")
+                                  (project-eshell "Eshell")
+                                  (eat-project-other-window "Eat")
+                                  (magit-project-status "Magit")
+                                  (shell "Shell")))
+
+  (keymap-set mode-specific-map "p" project-prefix-map)
+
+  (with-eval-after-load "project"
+    (keymap-set project-prefix-map "d" #'project-dired)
+    (keymap-set project-prefix-map "s" #'eat-project-other-window)
+    (keymap-set project-prefix-map "m" #'magit-project-status))
+#+end_src
+
+* Dired configuration
+
+#+begin_src emacs-lisp
+  (setq dired-listing-switches "-alh")
+#+end_src
+
+* Common settings for transient
+
+#+begin_src emacs-lisp
+  (with-eval-after-load "transient"
+    (keymap-set transient-map "<escape>" 'transient-quit-one))
+#+end_src
+
+* Don't display VC information in mode-line
+
+#+begin_src emacs-lisp
+  (setq vc-display-status 'no-backend)
+#+end_src
+
+* Repeat mode
+
+#+begin_src emacs-lisp
+  (repeat-mode 1)
+
+  (with-eval-after-load "dired"
+    (keymap-unset dired-jump-map "j"))
+
+  (keymap-unset next-error-repeat-map "n")
+  (keymap-unset next-error-repeat-map "p")
+#+end_src
+
+* Duplicate lines
+#+begin_src emacs-lisp
+  (keymap-set global-map "C-c d" 'duplicate-dwim)
+
+  (defvar-keymap duplicate-dwim-repeat-map
+    :doc "Keymap to repeat `duplicate-dwim'.  Used in `repeat-mode'."
+    :repeat t
+    "d"   #'duplicate-dwim)
+#+end_src
+
+* GPG Key
+#+begin_src emacs-lisp
+  (setq epa-file-encrypt-to '())
+#+end_src

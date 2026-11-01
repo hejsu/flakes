@@ -1,0 +1,124 @@
+#+title: Look & Feel
+#+auto_tangle: t
+#+PROPERTY: header-args :tangle ~/.config/emacs/tangle/laf.el
+
+#+begin_src emacs-lisp :exports none
+  ;;; -*- lexical-binding: t -*-
+#+end_src
+
+* Disabling some components
+
+No tool bar & menu bar.
+
+#+begin_src emacs-lisp
+  (tool-bar-mode -1)
+  (menu-bar-mode -1)
+#+end_src
+
+No scroll bars in minibuffer.
+
+#+begin_src emacs-lisp
+  (add-hook 'after-make-frame-functions
+            (lambda (frame)
+              (set-window-scroll-bars
+               (minibuffer-window frame) 0 nil 0 nil t)))
+#+end_src
+
+* Window divider
+
+Draw the vertical border with a box-drawing glyph instead of the default
+terminal character.
+
+#+begin_src emacs-lisp
+  (set-display-table-slot standard-display-table
+                          'vertical-border
+                          (make-glyph-code ?│))
+#+end_src
+
+* Highlight Numbers
+#+begin_src emacs-lisp
+  (use-package highlight-numbers
+    :hook (prog-mode . highlight-numbers-mode))
+#+end_src
+
+* Some UI related variables
+
+#+begin_src emacs-lisp
+  (setq x-underline-at-descent-line t)
+#+end_src
+
+* Fonts
+
+pixelsize, not pt: on Retina integer pixel widths keep org tables and
+mode-line glyphs crisp.
+
+#+begin_src emacs-lisp
+  (add-to-list 'default-frame-alist
+               '(font . "FiraCode Nerd Font Mono:pixelsize=14"))
+
+  (set-face-attribute 'fixed-pitch nil :family "FiraCode Nerd Font Mono")
+  (set-face-attribute 'fixed-pitch-serif nil :family "FiraCode Nerd Font Mono")
+  (set-face-attribute 'variable-pitch nil :family "Fira Sans")
+  (set-face-attribute 'variable-pitch-text nil :family "Fira Sans")
+#+end_src
+
+CJK falls back to the system PingFang.  It is proportional, so org
+tables with Chinese in them won't line up -- write tables in English.
+
+Fonts only apply to GUI frames; in a terminal the font belongs to the
+terminal, so charset fonts are set after startup, and only when there
+is a window system.  Named so that reloading the config does not pile
+duplicate entries onto the hook.
+
+#+begin_src emacs-lisp
+  (defun set-fonts ()
+    (when window-system
+      (set-frame-font "FiraCode Nerd Font Mono:pixelsize=14")
+      (dolist (charset '(kana han hangul cjk-misc bopomofo))
+        (set-fontset-font t charset "PingFang SC"))
+      (set-fontset-font t 'symbol "Symbols Nerd Font")))
+
+  (add-hook 'after-init-hook #'set-fonts)
+#+end_src
+
+* Themes
+
+#+begin_src emacs-lisp
+  (use-package modus-themes
+    :demand t
+    :config
+    ;; Tone down every accent colour and drop some grey backgrounds, so the
+    ;; theme draws less attention.
+    (setq modus-themes-common-palette-overrides
+          modus-themes-preset-overrides-faint)
+
+    (setq modus-themes-to-toggle
+          '(modus-operandi-tinted modus-vivendi-tinted))
+
+    (unless custom-enabled-themes
+      (load-theme 'modus-operandi-tinted t))
+
+    (keymap-global-set "<f7>" #'modus-themes-toggle))
+#+end_src
+
+* Paren Face
+#+begin_src emacs-lisp
+  (use-package paren-face
+    :hook (prog-mode . paren-face-mode)
+    :init (setq paren-face-regexp "[][(){}]"))
+#+end_src
+
+* Modeline
+
+** Diminish
+Hide unnecessary lighters.
+#+begin_src emacs-lisp
+  (use-package diminish
+    :demand t
+    :config
+    (add-hook 'eldoc-mode-hook (lambda () (diminish 'eldoc-mode)))
+    (add-hook 'hs-minor-mode-hook (lambda () (diminish 'hs-minor-mode)))
+    (add-hook 'auto-revert-mode-hook (lambda () (diminish 'auto-revert-mode)))
+    (add-hook 'buffer-face-mode-hook (lambda () (diminish 'buffer-face-mode)))
+    (add-hook 'paredit-mode-hook (lambda () (diminish 'paredit-mode))))
+#+end_src

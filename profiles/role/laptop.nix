@@ -16,7 +16,7 @@
     noto-fonts-cjk-serif
   ];
 
-  # Determinate Nix 
+  # Determinate Nix
   nix.enable = false;
 
   environment.etc."nix/nix.custom.conf".text = ''
@@ -40,7 +40,7 @@
     "${config.home.stateDir}/nix/profile"
   ];
 
-  # macOS 
+  # macOS
   # Host & User identity
   system.primaryUser = config.user.name;
 
@@ -72,6 +72,7 @@
 
   homebrew = {
     enable = true;
+    global.brewfile = true;
     enableFishIntegration = true;
     onActivation = {
       extraFlags = [ "--verbose" ];

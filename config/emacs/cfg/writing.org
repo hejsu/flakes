@@ -1,0 +1,224 @@
+#+title: Writing
+#+auto_tangle: t
+#+PROPERTY: header-args :tangle ~/.config/emacs/tangle/writing.el
+
+#+begin_src emacs-lisp :exports none
+  ;;; -*- lexical-binding: t -*-
+#+end_src
+
+* Org
+
+** Where org files live
+
+Everything org-related sits under `~/Documents/org', which is a plain
+local folder (iCloud Desktop & Documents sync is off on this machine).
+
+#+begin_src emacs-lisp
+  (setq org-directory (expand-file-name "~/Documents/org")
+        org-default-notes-file (expand-file-name "notes.org" org-directory))
+#+end_src
+
+** Toggle markup visibility with visible mode
+#+begin_src emacs-lisp
+  (with-eval-after-load "org"
+    (keymap-set org-mode-map "C-c v" #'visible-mode))
+#+end_src
+
+** More TODO state changes
+
+#+begin_src emacs-lisp
+  (setq org-todo-keywords
+        '((sequence "TODO(t)" "WAIT(w@/!)" "|" "DONE(d!)" "CANCELED(c@)"))
+        ;; LOGBOOK
+        org-log-into-drawer t)
+#+end_src
+
+** Org QL
+
+#+begin_src emacs-lisp
+  (use-package org-ql
+    :demand t
+    :config
+    (defvar-keymap org-ql-map
+      :doc "Org QL queries"
+      "f" #'org-ql-find
+      "s" #'org-ql-search
+      "v" #'org-ql-view
+      "l" #'org-ql-view-sidebar
+      "r" #'org-ql-view-recent-items
+      "t" #'org-ql-sparse-tree)
+
+    (keymap-set global-map "C-c q" org-ql-map))
+#+end_src
+
+** Org Roam
+#+begin_src emacs-lisp
+  (use-package org-roam
+    :defer t
+    :init
+    (setq org-roam-directory (expand-file-name "~/Documents/org"))
+    (setq org-roam-dailies-directory (expand-file-name "~/Documents/org/journal"))
+
+    ;; Use gpg encryption for files
+    (setq org-roam-capture-templates '(("d" "default" plain "%?"
+         :target (file+head "%<%Y%m%d%H%M%S>-${slug}.org.gpg"
+                            "#+title: ${title}\n")
+         :unnarrowed t)))
+
+    (setq org-roam-dailies-capture-templates
+          '(("d" "default" entry
+             "* %?"
+             :target (file+head "%<%Y-%m-%d>.org.gpg"
+                                "#+title: %<%Y-%m-%d>\n"))))
+    :config
+    (org-roam-db-autosync-mode 1))
+#+end_src
+
+*** Key bindings
+#+begin_src emacs-lisp
+  (defvar-keymap org-roam-keymap
+    :doc "Org Roam"
+    "l" #'org-roam-buffer-toggle
+    "f" #'org-roam-node-find
+    "g" #'org-roam-graph
+    "i" #'org-roam-node-insert
+    "c" #'org-roam-capture
+    "s" #'org-roam-db-sync
+    "t" #'org-roam-dailies-goto-today
+    "y" #'org-roam-dailies-goto-yesterday
+    "T" #'org-roam-dailies-goto-tomorrow
+    "d" #'org-roam-dailies-goto-date)
+
+  (keymap-set global-map "C-c r" org-roam-keymap)
+#+end_src
+
+*** A shortcut to create ID
+
+#+begin_src emacs-lisp
+  (keymap-set org-mode-map "C-c I" 'org-id-get-create)
+#+end_src
+
+*** Bigger GC threshold during sync.
+
+#+begin_src emacs-lisp
+  (setq org-roam-db-gc-threshold most-positive-fixnum)
+#+end_src
+
+** Good old template shortcut
+
+#+begin_src emacs-lisp
+  (with-eval-after-load "org"
+    (require 'org-tempo))
+#+end_src
+
+** Skip the link modules we never use
+
+Loading the default ~org-modules~ costs ~0.4s, of which ~ol-gnus~ alone is
+~0.3s.  Plain ~file:~ links keep working; only prefixes like ~info:~ or
+~docview:~ would stop opening.
+
+#+begin_src emacs-lisp
+  (setq org-modules nil)
+#+end_src
+
+** Turn off some eye-candy stuff
+
+#+begin_src emacs-lisp
+  (setq org-fontify-quote-and-verse-blocks nil
+        org-fontify-whole-heading-line nil
+        org-hide-leading-stars nil)
+#+end_src
+
+** Monospace fonts for table and code block
+
+#+begin_src emacs-lisp
+  (custom-set-faces
+   '(org-table ((t :inherit fixed-pitch-serif)))
+   '(org-block ((t :inherit fixed-pitch-serif))))
+#+end_src
+
+** Startup settings
+
+#+begin_src emacs-lisp
+  (setq org-startup-truncated t
+        org-startup-indented t)
+#+end_src
+
+** Emphasis markers
+
+Keep `*bold*` and friends visible.
+
+#+begin_src emacs-lisp
+  (setq org-hide-emphasis-markers nil)
+#+end_src
+
+** Babel
+
+#+begin_src emacs-lisp
+  (setq org-confirm-babel-evaluate nil)
+
+  (with-eval-after-load "org"
+    (org-babel-do-load-languages
+     'org-babel-load-languages
+     '((R . t)
+       (dot . t)
+       (shell . t)
+       (clojure . t)
+       (python . t)
+       (scheme . t))))
+
+  (defun after-babel-execute ()
+    (when org-link-preview-overlays
+      (org-link-preview-refresh)))
+
+  (add-hook 'org-babel-after-execute-hook 'after-babel-execute)
+#+end_src
+
+** Latex
+#+begin_src emacs-lisp
+  ;; Uses the bundled Org (9.8.7 in Emacs 31.1); straight is told to skip
+  ;; Org entirely in early-init.el.
+  (with-eval-after-load "org"
+    (setq org-format-latex-options
+          (plist-put org-format-latex-options :scale 4.0)))
+#+end_src
+
+** Agenda
+
+#+begin_src emacs-lisp
+  (setq org-agenda-files (list (expand-file-name "~/Documents/org/agenda")))
+#+end_src
+* Markdown
+
+#+begin_src emacs-lisp
+  (use-package markdown-mode
+    :bind (:map markdown-mode-map
+            ("C-c v" . markdown-toggle-markup-hiding)))
+
+  (use-package edit-indirect)
+#+end_src
+
+* Uniline
+
+Draw graphics with unicode
+
+#+begin_src emacs-lisp
+  (use-package uniline
+    :straight (:host github :repo "tbanel/uniline")
+    :commands uniline-mode)
+#+end_src
+
+** Meow integration
+
+#+begin_src emacs-lisp
+  (with-eval-after-load "uniline"
+    (define-keymap :keymap uniline-mode-map
+      "C-c SPC" #'uniline-launch-interface
+      "C-c -" #'uniline-set-brush-1
+      "C-c +" #'uniline-set-brush-2
+      "C-c =" #'uniline-set-brush-3
+      "C-c #" #'uniline-set-brush-block
+      "-" nil
+      "+" nil
+      "=" nil))
+#+end_src
