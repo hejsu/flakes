@@ -8,15 +8,23 @@
  *
  * The notification only means "the key was written", and configd rewrites it
  * on every DHCP renewal, so the value is compared here and identical updates
- * are dropped without spawning anything. The comparison key is the address
- * while it is inside DORM_CIDR, and a single constant outside: moving between
- * foreign networks spawns nothing. Inside the dorm the address stays part of
- * the key, because a new lease there can invalidate the portal session.
+ * are dropped without spawning anything. The key has three states: the address
+ * while it is inside DORM_CIDR, "-" for a foreign address, and "none" when the
+ * interface has no address. The two non-dorm states must stay distinct: losing
+ * the address has to trigger a decision, while moving between foreign networks
+ * does not. Inside the dorm the address stays part of the key, because a new
+ * lease there can invalidate the portal session.
+ *
+ * The guard is a two-state machine (cleared/armed) with an unknown initial
+ * state. Losing the address never clears it: the interface is about to come
+ * back, and the rules must already be in place when it does. Only a confirmed
+ * non-dorm address clears it. A dorm address always re-arms and logs in.
  *
  * Usage: ucas-ipv6-fix-watcher <script>
  *
  * The script is spawned with the current mode and address as argv[1] and
  * argv[2], and runs once at startup so a reboot always re-applies the state.
+ * Modes are "dorm" (arm and log in) and "other" (clear).
  */
 #include <SystemConfiguration/SystemConfiguration.h>
 #include <arpa/inet.h>
@@ -39,6 +47,17 @@ extern char **environ;
 static char last[80];
 static int seen;
 static int booting = 1;
+
+/* What the kernel's pf state is believed to be. UNKNOWN only exists between
+ * process start and the first address event, which then forces a command so
+ * the actual state converges. */
+enum guard_state {
+    GUARD_UNKNOWN,
+    GUARD_CLEARED,
+    GUARD_ARMED,
+};
+
+static enum guard_state guard = GUARD_UNKNOWN;
 
 /* True when address falls inside DORM_CIDR, e.g. "192.168.77.0/24". */
 static int in_dorm(const char *address) {
@@ -150,7 +169,11 @@ static void changed(SCDynamicStoreRef store, CFArrayRef keys, void *info) {
     }
 
     dorm = in_dorm(address);
-    snprintf(key, sizeof key, "%s", dorm ? address : "-");
+    if (dorm) {
+        snprintf(key, sizeof key, "%s", address);
+    } else {
+        snprintf(key, sizeof key, "%s", address[0] != '\0' ? "-" : "none");
+    }
 
     /* A lease renewal rewrites the same value; only real moves matter. */
     if (seen && strcmp(key, last) == 0) {
@@ -159,7 +182,17 @@ static void changed(SCDynamicStoreRef store, CFArrayRef keys, void *info) {
     seen = 1;
     snprintf(last, sizeof last, "%s", key);
 
-    spawn(info, dorm ? "dorm" : "other", address);
+    if (dorm) {
+        guard = GUARD_ARMED;
+        spawn(info, "dorm", address);
+    } else if (address[0] != '\0') {
+        if (guard != GUARD_CLEARED) {
+            guard = GUARD_CLEARED;
+            spawn(info, "other", address);
+        }
+    }
+    /* No address: keep the guard exactly as it is. Clearing here would leave
+     * the next association unguarded until DHCP hands out an address. */
 }
 
 int main(int argc, char **argv) {
