@@ -7,16 +7,46 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "accessible_mode": true,
+  "agent_servers": {
+    "opencode-v2": {
+      "default_config_options": {
+        "mode": "build",
+        "effort": "max",
+        "model": "cpa/deepseek-v4.1-flash"
+      },
+      "type": "registry"
+    }
+  },
+  "edit_predictions": {
+    "mode": "eager",
+    "provider": "zed"
+  },
+  "project_panel": {
+    "dock": "left"
+  },
+  "outline_panel": {
+    "dock": "left"
+  },
+  "collaboration_panel": {
+    "dock": "left"
+  },
+  "git_panel": {
+    "dock": "left"
+  },
   "agent": {
+    "dock": "right",
     "default_profile": "ask",
     "default_model": {
-      "provider": "deepseek",
-      "model": "deepseek-reasoner"
+      "effort": "medium",
+      "enable_thinking": true,
+      "provider": "zed.dev",
+      "model": "gpt-6.1-sol"
     }
   },
   "languages": {
     "Nix": {
-      "show_inline_completions": true
+      "show_edit_predictions": true
     }
   },
   "vim_mode": true,
@@ -29,7 +59,6 @@
     "light": "GitHub Light",
     "dark": "One Dark"
   },
-
   "git": {
     "inline_blame": {
       "enabled": false
