@@ -1,0 +1,119 @@
+#+title: Huawei Cloud DERP Setup & Latency Postmortem
+#+author: suspen
+#+date: <2026-11-02>
+
+在华为云（北京）为 Tailnet 自建私有 DERP（Region 900），用于国内节点间打洞协商与中继。
+记录最终配置、排查 400ms 握手延迟的过程，以及通过配置 SNI 绕过异常丢包的方案。
+
+* 最终架构
+
+在 =hosts/hws/default.nix= 的 =settings= 声明，不经过 Nginx，不配置公网域名，纯 NixOS 原生服务：
+
+#+begin_src nix
+services.tailscale.derper = {
+  enable = true;
+  domain = "hws.blenny-ayu.ts.net";
+  configureNginx = false;
+  port = 33443;
+  stunPort = 3478;
+  openFirewall = true;
+  verifyClients = true;
+};
+#+end_src
+
+- *Dual-Role* :: hws 同时作为 Tailnet 终端节点（=tailscaled=, 100.89.142.38）与 DERP 服务端（=derper=, 33443/3478）。
+- *Client Auth* :: 启用 =-verify-clients=。derper 收到连接后查询本地 =tailscaled.sock= 验证 node key，拒绝外部未授权客户端。
+- *Zero Domain Setup* :: DERPMap 中指定 =IPv4: "<hws-public-ip>"=，客户端直接拨号公网 IP，不依赖 DNS 解析；=HostName= 仅用于 TLS SNI 和证书校验。
+
+* 延迟排查：440ms 中继延迟成因
+
+部署后的测试数据：
+- =tailscale netcheck= 测得 STUN UDP 延迟为 *9.8ms*。
+- P2P 打洞成功后走 UDP 41641，延迟为 *10ms*。
+- 走 DERP 中继（=via DERP(hws)=）时，延迟稳定在 *430~440ms*。
+- 使用 curl 直接测试 =https://<hws-public-ip>:33443/derp/probe=，首字节耗时在 *800~900ms*。
+
+** 排除项
+
+1. *sing-box / SFM* :: Mac 端关闭 TUN 甚至退出 SFM 测试，curl 延迟无变化。
+2. *高位端口策略* :: 华为云放行 443 并在节点上重定向至 33443，测试耗时一致。
+3. *服务端负载* :: hws 本地回环 curl 自身 DERP 耗时 9ms，derper CPU 占用为 0。
+
+** 抓包分析：TCP 重传超时
+
+在 hws 端执行 =tcpdump= 分析连接交互：
+1. 客户端发送 TLS ClientHello 后，hws 仅收到后半段数据包，首段（1~154 字节）缺失。
+2. 客户端在约 240ms 后触发 TCP RTO 重传首段，hws 接收完整 ClientHello。
+3. hws 在 0.13ms 内完成处理并回送 TLS 响应，响应的前 1388 字节在传输途中丢失。
+4. 服务端等待约 240ms 超时重传，客户端接收后在 10ms 内完成 ACK。
+
+两次约 240ms 的 TCP 超时重传，使原本 10ms 级别的链路总耗时上升至 500ms 以上。
+
+** 对照测试数据
+
+| Probe / Test Case | TLS Handshake | First Byte | Root Cause Analysis |
+|--------------------+---------------+------------+---------------------|
+| Plain IP (Default) | ~520ms | ~850ms | Missing initial packet; ~250ms RTO retransmissions |
+| Plain IP (--curves X25519) | ~25ms | ~35ms | Shorter ClientHello avoids packet drops on route |
+| Server GODEBUG=tlsmlkem=0 | ~500ms | ~850ms | Ineffective; client still broadcasts large PQ keyshare |
+| Plain IP on Port 443 | ~530ms | ~880ms | Port-agnostic; not standard HTTPS port throttling |
+| SNI (hws.blenny-ayu.ts.net) | ~25ms | ~35ms | Handshake completes normally with X25519MLKEM768 |
+
+测试表明：
+延迟非后量子算法计算瓶颈所致，而是由于网络链路上针对目标为 IP 且不携带 SNI 的大尺寸 TLS 1.3 ClientHello 报文存在特定丢包。
+
+* 解决方案：配置 SNI
+
+** 方案设计
+
+为保留 ML-KEM 混合后量子加密并避免无 SNI 丢包，使 Tailscale 客户端握手时显式携带 SNI：
+
+1. 在 hws 生成包含相应 SAN 的证书：
+   #+begin_src text
+   CN = hws.blenny-ayu.ts.net
+   SAN = DNS:hws.blenny-ayu.ts.net, IP:<hws-public-ip>
+   #+end_src
+2. 计算 DER 指纹并写入 Tailscale Admin 控制台的 =derpMap=：
+   #+begin_src json
+   "900": {
+     "RegionID": 900,
+     "RegionCode": "hws",
+     "RegionName": "Huawei Cloud China",
+     "Nodes": [
+       {
+         "Name": "hws-pek",
+         "RegionID": 900,
+         "HostName": "hws.blenny-ayu.ts.net",
+         "CertName": "sha256-raw:<hash>",
+         "IPv4": "<hws-public-ip>",
+         "IPv6": "none",
+         "STUNPort": 3478,
+         "DERPPort": 33443
+       }
+     ]
+   }
+   #+end_src
+
+** 机制说明
+
+Tailscale 客户端处理 DERPMap 节点配置的流程：
+1. 检测到 =IPv4= 字段，直接建立到 =<hws-public-ip>:33443= 的 TCP 连接，跳过 DNS 查询。
+2. 发起 TLS 握手时，使用 =HostName= 作为 SNI，并通过 =CertName= 校验服务端证书指纹。
+3. 避免了特定链路下的无 SNI 丢包，保持后量子加密特性，同时避免对 MagicDNS 解析的依赖。
+
+配置生效后，curl 探针首字节延迟下降至 *30ms 级别*，echo 成功建立 =derp-900= 连接，DISCO 转发恢复正常。
+
+* 运维备忘
+
+- *证书生命周期* :: 自签证书存放在 =/var/lib/derper/certs-sni/=，有效期至 2027-11-02。证书更新时需同步更新控制台中的 =CertName=。
+- *验证命令* ::
+  #+begin_src bash
+  # 验证服务与 SNI 延迟
+  curl --noproxy '*' -ksS \
+    --resolve hws.blenny-ayu.ts.net:33443:<hws-public-ip> \
+    -w 'TLS=%{time_appconnect}s Total=%{time_total}s\n' \
+    https://hws.blenny-ayu.ts.net:33443/derp/probe
+
+  # 查看证书指纹
+  openssl x509 -in /var/lib/derper/certs-sni/hws.blenny-ayu.ts.net.crt -outform DER | sha256sum
+  #+end_src
