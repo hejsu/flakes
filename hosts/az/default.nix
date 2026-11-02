@@ -47,7 +47,7 @@
     };
 
     user.openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHJH2kt92wMUL0HavbaoyDqYQA0pjusb54lIXIQSEg7H xianzliang@foxmail.com"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHJH2kt92wMUL0HavbaoyDqYQA0pjusb54lIXIQSEg7H"
     ];
 
     system.stateVersion = "23.11";
@@ -63,7 +63,10 @@
 
     boot = {
       tmp.cleanOnBoot = true;
-      kernelParams = [ "console=tty1" "console=ttyS0,115200" ];
+      kernelParams = [
+        "console=ttyS0,115200"
+        "console=tty1"
+      ];
 
       loader = {
         efi.efiSysMountPoint = "/boot/efi";

@@ -61,17 +61,17 @@
       nil
 
       self.packages.atst
+
+      (pkgs.writeShellScriptBin "opencode" ''
+        exec ${self.inputs.llm-agents.packages.opencode2}/bin/opencode2 "$@"
+      '')
     ];
 
     homebrew = {
       taps = [ "d12frosted/emacs-plus" ];
 
       brews = [
-        "docker"
-        "docker-compose"
         "gcc"
-
-        "opencode"
       ];
 
       casks = [

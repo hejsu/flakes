@@ -7,20 +7,18 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "agent_buffer_font_family": "FiraCode Nerd Font",
+  "use_display_p3": true,
   "accessible_mode": true,
   "agent_servers": {
     "opencode-v2": {
       "default_config_options": {
         "mode": "build",
-        "effort": "max",
-        "model": "cpa/deepseek-v4.1-flash"
+        "effort": "medium",
+        "model": "cpa/glm-5.3-flash"
       },
       "type": "registry"
     }
-  },
-  "edit_predictions": {
-    "mode": "eager",
-    "provider": "zed"
   },
   "project_panel": {
     "dock": "left"
@@ -35,8 +33,15 @@
     "dock": "left"
   },
   "agent": {
+    "play_sound_when_agent_done": "when_hidden",
+    "tool_permissions": {
+      "tools": {
+        "fetch": {
+          "default": "allow"
+        }
+      }
+    },
     "dock": "right",
-    "default_profile": "ask",
     "default_model": {
       "effort": "medium",
       "enable_thinking": true,
@@ -44,20 +49,24 @@
       "model": "gpt-6.1-sol"
     }
   },
-  "languages": {
-    "Nix": {
-      "show_edit_predictions": true
-    }
-  },
   "vim_mode": true,
-  "ui_font_size": 16,
   "buffer_font_size": 14,
   "buffer_font_family": "Fira Code",
 
   "theme": {
     "mode": "system",
     "light": "GitHub Light",
-    "dark": "One Dark"
+    "dark": "GitHub Light"
+  },
+  "theme_overrides": {
+    "GitHub Light": {
+      "vim.normal.background": "#00000000",
+      "vim.insert.background": "#00000000",
+      "vim.replace.background": "#00000000",
+      "vim.visual.background": "#00000000",
+      "vim.visual_line.background": "#00000000",
+      "vim.visual_block.background": "#00000000"
+    }
   },
   "git": {
     "inline_blame": {
