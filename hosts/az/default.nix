@@ -8,10 +8,7 @@
   };
 
   modules = {
-    sops = {
-      enable = true;
-      ageKeyFile = "/var/lib/sops-nix/key.txt";
-    };
+    sops.enable = true;
 
     shell = {
       fish.enable = true;

@@ -8,9 +8,7 @@
   };
 
   modules = {
-    sops = {
-      enable = true;
-    };
+    sops.enable = true;
 
     shell = {
       fish.enable = true;

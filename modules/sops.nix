@@ -8,10 +8,11 @@ let cfg = config.modules.sops; in {
 
     ageKeyFile = mkOption {
       type = with types; nullOr (either path str);
-      default = "${config.home.configDir}/sops/age/keys.txt";
+      default = "/var/lib/sops-nix/key.txt";
       description = ''
         Path to the age private key file.
-        Defaults to the user-owned key; set to null to rely solely on
+        Defaults to the system-wide key used by sops-nix on Linux; Darwin
+        overrides it with the user-owned key. Set to null to rely solely on
         SSH-derived identities (sops-nix defaults to the host ed25519 key).
       '';
     };
