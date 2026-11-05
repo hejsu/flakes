@@ -1,0 +1,75 @@
+#+title: 服务与 Ingress
+
+* 两个视角
+Host 视角：服务拥有自己的配置、ingress（以及将来的 backup）。
+
+#+begin_src nix
+modules.services.magpie = {
+  enable = true;
+  ingress.tailnet = {
+    magpie = { endpoints."tcp:80" = "tcp://127.0.0.1:3430"; };
+    magpie-api = { endpoints."tcp:80" = "tcp://127.0.0.1:3425"; };
+  };
+};
+#+end_src
+
+实现视角：ingress 是独立模块，不知道具体服务。每个服务把自己的那份交给它：
+
+#+begin_src nix
+{ config, lib, services, ... }:
+
+let cfg = config.modules.services.magpie; in {
+  options.modules.services.magpie = {
+    enable = lib.mkEnableOption "Magpie LLM gateway";
+    ingress = lib.mkOption { type = services.ingressType; default = { }; };
+  };
+
+  config = lib.mkIf cfg.enable {
+    modules.ingress = cfg.ingress;   # 交给独立模块，之后不碰后端
+    # 工作负载配置…
+  };
+}
+#+end_src
+
+* 汇总与后端
+=modules.ingress.tailnet= / =modules.ingress.caddy= 是独立 option，服务各交自己那份：
+=modules.ingress.tailnet = cfg.ingress.tailnet;=（写在 =mkIf cfg.enable= 内，禁用即撤回）。
+
+=modules/services/lib.nix= 只消费合并结果，用 =lib.mkAliasDefinitions= 把**定义**
+转发给原生后端，而不是转发最终值：
+- 保留 =mkDefault/mkForce= 等优先级语义；
+- 类型校验由目标 option 完成（别名 option 用 =attrs=，与 =modules/home.nix=
+  的 =home.file= 同款）；
+- tailnet/caddy 非空时自动启用后端；断言拦截会让 ingress 静默失效的配置
+  （serve.configFile、caddy.settings、自定义 configFile）。
+
+注意：对某个服务的 ingress 用 =mkForce= 会在目标 option 上覆盖其他服务的贡献
+（定义级语义），和其他 NixOS option 一致。
+
+* 与服务的启用状态联动
+服务把自己的 ingress 交给 =modules.ingress= 的动作在 =mkIf cfg.enable= 内，
+所以禁用服务时它那份 ingress 自动撤回，其他服务的定义不受影响。
+
+* 增加新能力（如 backup）
+1. 在 =lib.nix= 定义 =backupType= 并加入 =_module.args.services=，
+   同时声明 =options.modules.backup = lib.mkOption { type = backupType; default = { }; };=。
+2. 每个服务加 =backup = lib.mkOption { type = services.backupType; default = { }; };=，
+   并在 config 里加 =modules.backup = cfg.backup;=。
+3. 在 =lib.nix= 的 config 段把 =modules.backup= 写到目标并启用所需组件。
+4. Host 在 =modules.services.<name>.backup= 下填写；默认不启用。
+
+* 验证
+=tests/services.nix= 用 =lib.runTests= 覆盖：ingress 转发、后端自动启用、
+禁用服务撤回、同目标冲突报错、所有主机求值。检查派生带 =passthru.failures=，
+可在不构建的情况下查看结果。
+
+#+begin_src sh
+nix flake check
+
+# 本机不是 x86_64-linux 时，直接读求值结果（等价于运行全部测试）
+nix eval --json .#checks.x86_64-linux.services.passthru.failures
+#+end_src
+
+结构仿照 00-template：=flake.nix= 里 =checks = mapModules ./tests import=，
+=mkFlake= 用 =withPkgs system { flake = self; } checks= 注入 flake；
+检查用 =meta.platforms= 限定为 NixOS。

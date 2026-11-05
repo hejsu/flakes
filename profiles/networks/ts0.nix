@@ -1,5 +1,5 @@
 # profiles/network/ts0 -- join this machine to a tailnet ("tailscale 0")
-{ config, lib, ... }: {
+{ config, ... }: {
   services.tailscale = {
     enable = true;
     useRoutingFeatures = "client";
@@ -9,7 +9,5 @@
       "--accept-dns=true"
       "--operator=${config.user.name}"
     ];
-
-    serve.enable = lib.mkDefault (config.services.tailscale.serve.services != { });
   };
 }

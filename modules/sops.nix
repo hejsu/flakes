@@ -1,4 +1,4 @@
-{ self, config, lib, pkgs, options, ... }:
+{ self, config, lib, pkgs, ... }:
 
 let cfg = config.modules.sops; in {
   imports = [ self.modules.sops-nix.sops ];
@@ -14,12 +14,6 @@ let cfg = config.modules.sops; in {
         Defaults to the user-owned key; set to null to rely solely on
         SSH-derived identities (sops-nix defaults to the host ed25519 key).
       '';
-    };
-
-    secrets = mkOption {
-      type = options.sops.secrets.type;
-      default = { };
-      description = "Alias for sops.secrets";
     };
   };
 
@@ -42,8 +36,6 @@ let cfg = config.modules.sops; in {
         sshKeyPaths = [ ];
       };
       gnupg.sshKeyPaths = [ ];
-
-      secrets = lib.mkAliasDefinitions options.modules.sops.secrets;
     };
   };
 }

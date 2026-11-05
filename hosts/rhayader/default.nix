@@ -4,6 +4,7 @@
   profiles = {
     user = "suspen";
     role = "laptop";
+    networks = [ "ucas" ];
   };
 
   modules = {
@@ -22,11 +23,6 @@
       typst.enable = true;
       python.enable = true;
       node.enable = true;
-    };
-
-    services = {
-      ucas-ipv6-fix.enable = true;
-      ucasrun.enable = true;
     };
   };
 
@@ -55,12 +51,34 @@
       "emacs/straight-versions.el".source = "${self.configDir}/emacs/straight-versions.el";
     };
 
+    # Undo: sudo sysctl -w net.inet6.ip6.use_tempaddr=1 net.inet6.ip6.prefer_tempaddr=1
+    launchd.daemons.ipv6-privacy = {
+      script = ''
+        /usr/sbin/sysctl -w \
+          net.inet6.ip6.use_tempaddr=0 \
+          net.inet6.ip6.prefer_tempaddr=0
+      '';
+      serviceConfig.RunAtLoad = true;
+    };
+
+    security.sudo.extraConfig =
+      let
+        script = "/etc/profiles/per-user/${config.user.name}/bin/ucas-ipv6-ctl";
+      in
+      ''
+        ${config.user.name} ALL=(root) NOPASSWD: ${script} "", ${script} clear
+      '';
+
     user.packages = with pkgs; [
       dash
       mtr
       nil
 
       self.packages.atst
+      self.packages.bitsrun
+
+      (pkgs.writeShellScriptBin "ucas-ipv6-ctl"
+        (builtins.readFile ./assets/ucas-ipv6-ctl.sh))
 
       (pkgs.writeShellScriptBin "opencode" ''
         exec ${self.inputs.llm-agents.packages.opencode2}/bin/opencode2 "$@"

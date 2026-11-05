@@ -18,7 +18,7 @@
       git.enable = true;
     };
 
-    services = {
+    networking = {
       ssh.enable = true;
     };
   };
@@ -29,8 +29,6 @@
 
     networking = {
       usePredictableInterfaceNames = false;
-      useNetworkd = true;
-      useDHCP = false;
     };
 
     systemd.network.networks."10-eth0" = {

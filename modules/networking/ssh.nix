@@ -1,8 +1,8 @@
 # OpenSSH server, key-only. Opt-in: darwin hosts use the system sshd instead.
 { config, lib, ... }:
 
-let cfg = config.modules.services.ssh; in {
-  options.modules.services.ssh = {
+let cfg = config.modules.networking.ssh; in {
+  options.modules.networking.ssh = {
     enable = lib.mkEnableOption "OpenSSH server (key-only)";
   };
 

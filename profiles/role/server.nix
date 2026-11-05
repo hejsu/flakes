@@ -12,6 +12,29 @@
   # Weekly TRIM (SSD/VPS-friendly)
   services.fstrim.enable = true;
 
+  virtualisation.oci-containers.backend = "podman";
+
+  # Unified wired networking for servers. systemd-networkd applies only the
+  # lexicographically first file matching an interface, so the generic one is
+  # named 99- to stay a last resort: a host file (e.g. 10-eth0) wins silently.
+  networking = {
+    useDHCP = false;
+    useNetworkd = true;
+  };
+
+  systemd.network = {
+    networks."99-wired" = {
+      matchConfig.Name = "eth* en*";
+      networkConfig = {
+        DHCP = "ipv4";
+        IPv6AcceptRA = true;
+      };
+      linkConfig.RequiredForOnline = false;
+    };
+
+    wait-online.enable = false;
+  };
+
   # Power
   powerManagement.cpuFreqGovernor = lib.mkDefault "ondemand";
 
@@ -30,4 +53,3 @@
     experimental-features = [ "nix-command" "flakes" ];
   };
 }
-

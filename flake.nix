@@ -26,5 +26,6 @@
       profiles = mapModules ./profiles id;
       packages = mapModules ./packages id;
       overlays = mapModules ./overlays import;
+      checks = mapModules ./tests import;
     };
 }

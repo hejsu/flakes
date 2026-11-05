@@ -1,5 +1,5 @@
 # CLIProxyAPI.
-{ self, config, lib, pkgs, ... }:
+{ self, config, lib, pkgs, services, ... }:
 
 let
   cfg = config.modules.services.cliproxyapi;
@@ -13,13 +13,21 @@ let
     oauth.auth-dir = "/var/lib/cliproxyapi/auth";
     observability.usage.usage-statistics-enabled = true;
   };
-in {
+in
+{
   options.modules.services.cliproxyapi = {
     enable = lib.mkEnableOption "CLIProxyAPI";
-    tailsvc = lib.mkEnableOption "expose via Tailscale Serve";
+
+    ingress = lib.mkOption {
+      type = services.ingressType;
+      default = { };
+    };
   };
 
   config = lib.mkIf cfg.enable {
+    modules.ingress.tailnet = cfg.ingress.tailnet;
+    modules.ingress.caddy = cfg.ingress.caddy;
+
     sops.secrets = {
       "cpa-management-key" = { };
       "github-token" = { };
@@ -58,13 +66,6 @@ in {
           reverse_proxy 127.0.0.1:8317
         }
       '';
-    };
-
-    services.tailscale.serve.services = lib.mkIf cfg.tailsvc {
-      cpa = {
-        advertised = true;
-        endpoints."tcp:80" = "tcp://127.0.0.1:8315";
-      };
     };
 
     systemd.services.cliproxyapi = {

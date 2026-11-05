@@ -19,26 +19,15 @@
       git.enable = true;
     };
 
-    services = {
+    networking = {
       ssh.enable = true;
     };
   };
 
   ## Local config
   settings = { ... }: {
-    user = {
-      initialHashedPassword = "$6$A/Ms/0m62sATO5ge$8dAjphC5IF5bKOa8W2/MEsVgW8HaL1lRZBeUi3ZO8hk1lkuU25HQVQ5m8zQobvtJZAk3NPRjeJq3zh7EQEdML0";
-    };
-
     networking = {
-      useDHCP = true;
       enableIPv6 = true;
-      dhcpcd = {
-        enable = true;
-        IPv6rs = true;
-        allowInterfaces = [ "eth0" ];
-        wait = "both";
-      };
 
       firewall = {
         enable = true;

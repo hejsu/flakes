@@ -42,9 +42,9 @@ rec {
       };
 
       modules = mkOption {
-        type = types.attrs;
+        type = with types; either attrs (functionTo attrs);
         default = { };
-        description = "High-level dotfiles feature switches";
+        description = "High-level dotfiles configuration, or a function receiving config, lib and pkgs.";
       };
 
       hardware = mkOption {

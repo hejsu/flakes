@@ -4,7 +4,7 @@
   profiles = {
     user = "suspen";
     role = "server";
-    networks = [ "pek" "ts0" ];
+    networks = [ "pek" "ts0" "ucas" ];
   };
 
   modules = {
@@ -13,40 +13,49 @@
       ageKeyFile = "/var/lib/sops-nix/key.txt";
     };
 
-    services = {
-      ssh.enable = true;
-      singbox.enable = true;
-      ucasrun.enable = true;
-      cliproxyapi = {
-        enable = true;
-        tailsvc = true;
-      };
-    };
-
     shell = {
       direnv.enable = true;
       git.enable = true;
       fish.enable = true;
       nvim.enable = true;
     };
-  };
-
-  settings = { config, pkgs, ... }: {
-    user = {
-      initialHashedPassword = "$6$8fKq2Zr9PmLxWvTy$o6W7AAu2IewTITRyufOT8R6i4WqeQxJLs.PZFUEHagBuOdxlAPhktx0OsLj.splluOmMsMmim0cGNjHrabxOW.";
-    };
-
-    programs.nix-ld.enable = true;
 
     networking = {
-      useNetworkd = true;
-      useDHCP = false;
+      ssh.enable = true;
+      singbox.enable = true;
     };
 
-    systemd.network = {
-      enable = true;
-      wait-online.enable = false;
+    services = {
+      cliproxyapi = {
+        enable = true;
+        ingress.tailnet.cpa.endpoints."tcp:80" = "tcp://127.0.0.1:8315";
+      };
+
+      magpie = {
+        enable = true;
+        ingress.tailnet = {
+          magpie.endpoints."tcp:80" = "tcp://127.0.0.1:3430";
+          magpie-api.endpoints."tcp:80" = "tcp://127.0.0.1:3425";
+        };
+      };
     };
+
+  };
+
+  settings = { config, lib, pkgs, ... }: {
+    programs.nix-ld.enable = true;
+
+    ## Magpie Podman Auto Update
+    systemd.timers.podman-auto-update = lib.mkIf config.modules.services.magpie.enable {
+      wantedBy = [ "timers.target" ];
+    };
+    virtualisation.oci-containers.containers = lib.mkIf config.modules.services.magpie.enable {
+      magpie.labels."io.containers.autoupdate" = "registry";
+    };
+
+    # workaround on singbox tun and podman: https://github.com/SagerNet/sing-box/issues/2700
+    # But it's not necessary when using host networking
+    # networking.firewall.trustedInterfaces = [ "podman0" ];
 
     systemd.network.networks."10-eth0" = {
       matchConfig.Name = "eth0";
@@ -64,6 +73,7 @@
       dhcpV4Config.UseDNS = false;
 
       ipv6AcceptRAConfig = {
+        # ucas ipv6 fix
         RouterAllowList = [ "fe80::7625:8aff:fe00:f1ab" ];
       };
     };
@@ -74,16 +84,15 @@
 
     sops.secrets = {
       "restic-password" = { };
-      "s3-access-key-id" = { };
-      "s3-secret-access-key" = { };
+      "s3-cstnet-ak" = { };
+      "s3-cstnet-sk" = { };
     };
 
     sops.templates."restic.env" = {
       mode = "0400";
       content = ''
-        RESTIC_PASSWORD="${config.sops.placeholder."restic-password"}"
-        AWS_ACCESS_KEY_ID="${config.sops.placeholder."s3-access-key-id"}"
-        AWS_SECRET_ACCESS_KEY="${config.sops.placeholder."s3-secret-access-key"}"
+        AWS_ACCESS_KEY_ID="${config.sops.placeholder."s3-cstnet-ak"}"
+        AWS_SECRET_ACCESS_KEY="${config.sops.placeholder."s3-cstnet-sk"}"
       '';
     };
 
@@ -91,6 +100,7 @@
       initialize = true;
       repository = "s3:https://s3.cstcloud.cn/echo-restic";
       environmentFile = config.sops.templates."restic.env".path;
+      passwordFile = config.sops.secrets."restic-password".path;
       extraOptions = [ "s3.bucket-lookup=path" ];
 
       paths = [
@@ -104,7 +114,6 @@
       ];
 
       pruneOpts = [ "--keep-daily 30" "--keep-weekly 12" "--keep-monthly 12" ];
-
       runCheck = true;
       checkOpts = [ "--read-data" ];
     };

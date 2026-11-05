@@ -3,8 +3,8 @@
 # $CONFIGURATION_DIRECTORY (/etc/sing-box) without embedding config in store.
 { config, lib, pkgs, ... }:
 
-let cfg = config.modules.services.singbox; in {
-  options.modules.services.singbox = {
+let cfg = config.modules.networking.singbox; in {
+  options.modules.networking.singbox = {
     enable = lib.mkEnableOption "sing-box client (tun) fed by a subscription";
   };
 
@@ -12,7 +12,7 @@ let cfg = config.modules.services.singbox; in {
     assertions = [{
       assertion = config.services.sing-box.settings == { };
       message = ''
-        modules.services.singbox: services.sing-box.settings must stay empty --
+        modules.networking.singbox: services.sing-box.settings must stay empty --
         that is what makes sing-box read /etc/sing-box. Setting it would send
         sing-box to $RUNTIME_DIRECTORY and ignore the fetched /etc/sing-box/config.json.
       '';
@@ -37,7 +37,7 @@ let cfg = config.modules.services.singbox; in {
     };
 
     networking.firewall.trustedInterfaces = [ "tun0" ];
- 
+
     systemd.services.singbox-subscription = {
       description = "Fetch sing-box config from subscription";
       after = [ "network-online.target" ];

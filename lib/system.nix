@@ -38,7 +38,16 @@ rec {
     ++ [
       host.hardware
       host.settings
-      { inherit (host) modules; }
+      ({ config, ... }: {
+        modules =
+          if isFunction host.modules
+          then
+            host.modules
+              (intersectAttrs
+                (functionArgs host.modules)
+                { inherit config lib pkgs; })
+          else host.modules;
+      })
     ]
     ++ extraModules;
 
@@ -50,6 +59,7 @@ rec {
     , profiles ? { }
     , overlays ? { }
     , packages ? { }
+    , checks ? { }
     , ...
     }:
     let
@@ -95,10 +105,7 @@ rec {
           builder = inputs.darwin.lib.darwinSystem;
           moduleKey = "darwinModules";
           match = s: hasSuffix "-darwin" s;
-          extraModules = [
-            ../modules/_darwin
-            { _module.freeformType = lib.types.attrsOf lib.types.anything; }
-          ];
+          extraModules = [ ../modules/_darwin ];
         };
         nixos = {
           builder = inputs.nixpkgs.lib.nixosSystem;
@@ -131,11 +138,11 @@ rec {
 
       # callPackage first: platform checks read meta off the built derivation,
       # not the package function.
-      withPkgs = system: packageAttrs:
+      withPkgs = system: extraArgs: packageAttrs:
         let pkgs = pkgsFor system; in
         filterAttrs (_: lib.meta.availableOn pkgs.stdenv.hostPlatform)
           (mapAttrs
-            (_: p: pkgs.callPackage p { })
+            (_: p: pkgs.callPackage p extraArgs)
             packageAttrs);
 
       mkConfigs = p:
@@ -153,7 +160,9 @@ rec {
       darwinConfigurations = mkConfigs platforms.darwin;
       nixosConfigurations = mkConfigs platforms.nixos;
 
-      packages = genAttrs systems (system: withPkgs system packages);
+      packages = genAttrs systems (system: withPkgs system { } packages);
+
+      checks = genAttrs systems (system: withPkgs system { flake = self; } checks);
 
       formatter = genAttrs systems (system:
         (pkgsFor system).nixpkgs-fmt

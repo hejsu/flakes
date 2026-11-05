@@ -107,6 +107,7 @@ let cfg = config.modules.shell.fish; in {
       tokei
       fastfetch
       nh
+      jq
     ];
   };
 }
