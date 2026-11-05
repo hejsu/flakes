@@ -12,8 +12,6 @@
 
     shell = {
       fish.enable = true;
-      nvim.enable = true;
-      git.enable = true;
     };
 
     networking = {

@@ -5,6 +5,23 @@
     message = "The 'laptop' profile is currently configured exclusively for macOS!";
   }];
 
+  # Weekly maintenance. Determinate Nixd already collects the store, so this
+  # only trims system generations and dedupes the store.
+  launchd.daemons.nix-gc = {
+    script = ''
+      /nix/var/nix/profiles/default/bin/nix-env \
+        --profile /nix/var/nix/profiles/system \
+        --delete-generations 7d
+      /nix/var/nix/profiles/default/bin/nix store optimise
+    '';
+    serviceConfig = {
+      StartCalendarInterval = [ { Weekday = 0; Hour = 4; } ];
+      RunAtLoad = false;
+      StandardOutPath = "/var/log/nix-gc.log";
+      StandardErrorPath = "/var/log/nix-gc.log";
+    };
+  };
+
   # font
   fonts.packages = with pkgs; [
     fira
@@ -49,15 +66,24 @@
   system.defaults = {
     dock.autohide = true;
     dock.mru-spaces = false;
-    finder.AppleShowAllExtensions = true;
-    finder.FXPreferredViewStyle = "clmv";
+
+    finder = {
+      AppleShowAllExtensions = true;
+      FXPreferredViewStyle = "clmv";
+      ShowPathbar = true;
+      ShowStatusBar = true;
+      _FXShowPosixPathInTitle = true;
+      FXDefaultSearchScope = "SCcf";
+    };
+
     loginwindow.GuestEnabled = false;
     NSGlobalDomain = {
-      ApplePressAndHoldEnabled = false;
       AppleICUForce24HourTime = true;
       AppleInterfaceStyle = "Dark";
+
       KeyRepeat = 2;
-      # InitialKeyRepeat = 15;
+      InitialKeyRepeat = 15;
+      ApplePressAndHoldEnabled = false;
     };
   };
 

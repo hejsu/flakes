@@ -5,8 +5,10 @@ let cfg = config.modules.apps.emacs; in {
     lib.mkEnableOption "Emacs, installed from the emacs-plus cask";
 
   config = lib.mkIf cfg.enable {
-    homebrew.taps = [ "d12frosted/emacs-plus" ];
-    homebrew.casks = [ "emacs-plus-app" ];
+    homebrew = {
+      taps = [ "d12frosted/emacs-plus" ];
+      casks = [ "emacs-plus-app" ];
+    };
 
     home.configFile = {
       "emacs/early-init.el".source = "${self.configDir}/emacs/early-init.el";

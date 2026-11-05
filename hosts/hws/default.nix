@@ -24,20 +24,11 @@
   settings = { lib, pkgs, ... }: {
     system.stateVersion = "26.05";
 
-    networking = {
-      usePredictableInterfaceNames = false;
-    };
-
-    systemd.network.networks."10-eth0" = {
-      matchConfig.Name = "eth0";
-      networkConfig = {
-        DHCP = "ipv4";
-        IPv6AcceptRA = true;
-        DNS = [
-          "223.5.5.5"
-          "119.29.29.29"
-        ];
-      };
+    systemd.network.networks."99-wired" = {
+      networkConfig.DNS = [
+        "223.5.5.5"
+        "119.29.29.29"
+      ];
       dhcpV4Config.UseDNS = false;
     };
 

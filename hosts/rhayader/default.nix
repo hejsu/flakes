@@ -19,8 +19,9 @@
     shell = {
       fish.enable = true;
       git.enable = true;
-      direnv.enable = true;
       nvim.enable = true;
+      direnv.enable = true;
+      comma.enable = true;
     };
 
     dev = {

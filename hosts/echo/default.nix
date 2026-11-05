@@ -15,6 +15,7 @@
       git.enable = true;
       fish.enable = true;
       nvim.enable = true;
+      comma.enable = true;
     };
 
     networking = {
@@ -25,7 +26,9 @@
     services = {
       cliproxyapi = {
         enable = true;
-        ingress.tailnet.cpa.endpoints."tcp:80" = "tcp://127.0.0.1:8315";
+        ingress.tailnet = {
+          cpa.endpoints."tcp:80" = "tcp://127.0.0.1:8315";
+        };
       };
 
       magpie = {
@@ -36,7 +39,6 @@
         };
       };
     };
-
   };
 
   settings = { config, lib, pkgs, ... }: {
