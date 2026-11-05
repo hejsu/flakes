@@ -8,6 +8,12 @@
   };
 
   modules = {
+    apps = {
+      emacs.enable = true;
+      kitty.enable = true;
+      zed.enable = true;
+    };
+
     sops.enable = true;
 
     shell = {
@@ -37,16 +43,6 @@
     launchd.user.envVariables = {
       SSH_AUTH_SOCK = "${config.home.dir}/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh";
       COPILOT_HOME = "${config.home.configDir}/copilot";
-    };
-
-    home.configFile = {
-      "kitty".source = "${self.configDir}/kitty";
-      "zed/settings.json".source = "${self.configDir}/zed/settings.json";
-
-      "emacs/early-init.el".source = "${self.configDir}/emacs/early-init.el";
-      "emacs/init.el".source = "${self.configDir}/emacs/init.el";
-      "emacs/cfg".source = "${self.configDir}/emacs/cfg";
-      "emacs/straight-versions.el".source = "${self.configDir}/emacs/straight-versions.el";
     };
 
     # Undo: sudo sysctl -w net.inet6.ip6.use_tempaddr=1 net.inet6.ip6.prefer_tempaddr=1
@@ -84,17 +80,11 @@
     ];
 
     homebrew = {
-      taps = [ "d12frosted/emacs-plus" ];
-
       brews = [
         "gcc"
       ];
 
       casks = [
-        "emacs-plus-app"
-
-        "kitty"
-        "zed"
         "wechat"
         "qq"
         "google-chrome"

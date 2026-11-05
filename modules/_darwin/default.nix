@@ -1,5 +1,6 @@
 { ... }: {
   imports = [
+    ./apps
     ./cliproxyapi.nix
     ./parity.nix
     ./sops.nix
