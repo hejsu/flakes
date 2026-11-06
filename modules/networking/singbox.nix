@@ -1,6 +1,7 @@
 # sing-box client (tun) fed by a remote subscription.
 # Keeps `services.sing-box.settings` empty so nixpkgs points sing-box at
 # $CONFIGURATION_DIRECTORY (/etc/sing-box) without embedding config in store.
+# WORKAROUND: https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/services/networking/sing-box.nix
 { config, lib, pkgs, ... }:
 
 let cfg = config.modules.networking.singbox; in {

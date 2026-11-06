@@ -122,13 +122,7 @@ function ss_gens --description "List system generations"
 end
 
 function ss_nh_in_scratch --description "Run nh from a throwaway cwd (nh <= 4.4.2 .cache bug)"
-    # TODO(nh): drop once pkgs.nh >= 4.5.0.
-    # nh <= 4.4.2 sets HOME="" when elevating, so `nh darwin switch` drops a
-    # root-owned .cache in the cwd and later builds hit "Permission denied"
-    # (issues/739, fixed in PR 758 / v4.5.0-beta1). The cd happens in a child
-    # shell so Ctrl-C cannot strand this shell, and one fixed path is reused:
-    # a root-owned .cache cannot be removed as the user, so mktemp would leak
-    # one directory per interrupted attempt.
+    # WORKAROUND: https://github.com/nix-community/nh/issues/739
     set -l scratch $TMPDIR/nh-switch.$USER
     test -n "$TMPDIR"; or set scratch /tmp/nh-switch.$USER
     rm -rf $scratch 2>/dev/null
@@ -222,9 +216,7 @@ function ss_deploy --description "Push this checkout to host(s) and rebuild"
         # more authentications on every deploy.
         and nh os switch -H (string replace -r '^.*@' '' -- $host) --diff never \
             --build-host $host --target-host $host
-        # TODO(nh): drop once pkgs.nh includes PR 793 (nix-community/nh#793).
-        # nh 4.4.2 queries `nix build <drv>^* --print-out-paths` on the remote
-        # without `--no-link`, leaving a spurious ~/result symlink on build_host.
+        # WORKAROUND: https://github.com/nix-community/nh/pull/793
         and ssh $host 'rm -f ~/result'
         or begin
             echo "==> Deploy to $host failed!" >&2

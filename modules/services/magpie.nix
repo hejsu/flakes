@@ -29,6 +29,7 @@ let cfg = config.modules.services.magpie; in {
       image = "ghcr.io/yetone/magpie:latest";
       autoStart = true;
 
+      # WORKAROUND: https://github.com/SagerNet/sing-box/issues/2700
       extraOptions = [ "--network=host" ];
       environment.MAGPIE_ADDR = "127.0.0.1:3425";
       environmentFiles = [ config.sops.templates."magpie.env".path ];
