@@ -21,8 +21,7 @@
   };
 
   ## Local config
-  settings = { lib, pkgs, ... }: {
-    system.stateVersion = "26.05";
+  settings = { lib, pkgs, config, ... }: {
 
     systemd.network.networks."99-wired" = {
       networkConfig.DNS = [
@@ -32,11 +31,47 @@
       dhcpV4Config.UseDNS = false;
     };
 
+    sops.secrets."cloudflare-api-token-dns-edit-zone-read" = { };
+    sops.templates."cloudflare-acme-env" = {
+      owner = "acme";
+      group = "acme";
+      mode = "0400";
+      content = ''
+        CF_DNS_API_TOKEN="${config.sops.placeholder."cloudflare-api-token-dns-edit-zone-read"}"
+      '';
+    };
+
+    security.acme = {
+      acceptTerms = true;
+      defaults.email = "suspen@outlook.sk";
+    };
+
+    security.acme.certs."derp.aoran.eu.org" = {
+      dnsProvider = "cloudflare";
+      environmentFile = config.sops.templates."cloudflare-acme-env".path;
+      group = "caddy";
+      reloadServices = [ "caddy.service" ];
+
+      # https://github.com/go-acme/lego/discussions/3261
+      extraLegoFlags = [ "--dns.propagation.disable-rns" ];
+    };
+
+    services.caddy.enable = true;
+
+    services.caddy.virtualHosts."https://derp.aoran.eu.org:33443".extraConfig = ''
+      tls /var/lib/acme/derp.aoran.eu.org/fullchain.pem \
+          /var/lib/acme/derp.aoran.eu.org/key.pem
+      reverse_proxy 127.0.0.1:8081
+    '';
+
+    systemd.services.caddy.after = [ "acme-derp.aoran.eu.org.service" ];
+    systemd.services.caddy.wants = [ "acme-derp.aoran.eu.org.service" ];
+
     services.tailscale.derper = {
       enable = true;
-      domain = "hws.blenny-ayu.ts.net";
+      domain = "derp.aoran.eu.org";
       configureNginx = false;
-      port = 33443;
+      port = 8081;
       stunPort = 3478;
       openFirewall = true;
       verifyClients = true;
@@ -44,22 +79,7 @@
 
     networking.firewall.allowedTCPPorts = [ 33443 ];
 
-    systemd.services.tailscale-derper = {
-      after = [ "tailscaled.service" ];
-      wants = [ "tailscaled.service" ];
-
-      serviceConfig.ExecStart = lib.mkForce (lib.concatStringsSep " " [
-        "${pkgs.tailscale.derper}/bin/derper"
-        "-a=:33443"
-        "-hostname=hws.blenny-ayu.ts.net"
-        "-certmode=manual"
-        "-certdir=/var/lib/derper/certs-sni"
-        "-c=/var/lib/derper/derper.key"
-        "-http-port=-1"
-        "-stun-port=3478"
-        "-verify-clients"
-      ]);
-    };
+    system.stateVersion = "26.05";
   };
 
   hardware = { ... }: {
