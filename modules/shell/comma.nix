@@ -1,15 +1,22 @@
 { self, lib, config, ... }:
 {
-  imports = [ self.modules.nix-index-database.default ];
+  # Do not import nix-index-database's module: importing it enables
+  # programs.nix-index with the full database on every host, including
+  # hosts where comma is disabled.
+  # WORKAROUND: https://github.com/nix-community/nix-index-database/blob/main/nixos-module.nix
 
   options.modules.shell.comma.enable =
     lib.mkEnableOption "comma with the small nix-index database";
 
   config = lib.mkIf config.modules.shell.comma.enable {
-    programs.nix-index-database.comma.enable = true;
+    user.packages = [
+      self.inputs.nix-index-database.packages.comma-with-db
+    ];
 
-    # The module points nix-locate at the full database; keep it small.
-    programs.nix-index.package = self.inputs.nix-index-database.packages.nix-index-with-small-db;
+    programs.nix-index = {
+      enable = true;
+      package = self.inputs.nix-index-database.packages.nix-index-with-small-db;
+    };
 
     # Determinate's registry points nixpkgs at nixpkgs-weekly, which goes stale.
     # Run comma's packages from the nixpkgs this flake actually pins instead.
