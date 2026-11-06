@@ -1,4 +1,9 @@
 [mgr]
 prepend_keymap = [
   # { on = "d",  run = "shell -- trash %s", desc = "Trash selected files" },
+
+  # System clipboard file sync (macOS only; Linux is SSH-only, no display server)
+  { on = "y",     for = "macos", run = [ "yank", 'plugin my-clipboard -- --action=copy' ],        desc = "Yank selected files (copy)" },
+  { on = "x",     for = "macos", run = [ "yank --cut", 'plugin my-clipboard -- --action=copy' ], desc = "Yank selected files (cut)" },
+  { on = "<C-p>", for = "macos", run = 'plugin my-clipboard -- --action=paste',                    desc = "Paste system clipboard files" },
 ]
