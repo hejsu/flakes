@@ -26,7 +26,9 @@ function ss --description "Helper for managing dotfiles"
         case help -h --help
             ss_help
         case '-*'
-            ss_sync $cmd $argv
+            # Leading flags are iproute2 ss (`ss -lntp`), not the helper.
+            # Helper sync flags go after the verb: `ss sync --dry`.
+            command ss $cmd $argv
         case "*"
             # A bare host name is deploy shorthand: `ss echo` == `ss deploy echo`.
             # Derived from hosts/ so new machines need no edit here. The local
@@ -61,11 +63,15 @@ sync passes its verb straight to nh, so any nh subcommand works:
   switch  build  test  boot  rollback  repl  info  build-vm  build-image
   (nh darwin only ships switch, build and repl; rollback uses darwin-rebuild)
 
-Anything else is passed through to nh.'
+Anything else is passed through to nh.
+
+Leading flags are passed to iproute2 ss, so `ss -lntp` works. Helper sync
+flags go after the verb: `ss sync --dry`. Real ss help is `command ss -h`.'
 end
 
 function ss_sync --description "Rebuild this host via nh (default verb: switch)"
-    # A leading flag means the verb was omitted, so `ss --dry` == `ss sync --dry`.
+    # A leading flag after `sync` means the verb was omitted, so
+    # `ss sync --dry` == `ss sync switch --dry`.
     set -l verb switch
     if set -q argv[1]; and not string match -qr '^-' -- $argv[1]
         set verb $argv[1]

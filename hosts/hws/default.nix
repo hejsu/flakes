@@ -32,40 +32,37 @@
     };
 
     sops.secrets."cloudflare-api-token-dns-edit-zone-read" = { };
-    sops.templates."cloudflare-acme-env" = {
-      owner = "acme";
-      group = "acme";
+    sops.templates."caddy-cloudflare-env" = {
+      restartUnits = [ "caddy.service" ];
+      owner = "caddy";
+      group = "caddy";
       mode = "0400";
       content = ''
-        CF_DNS_API_TOKEN="${config.sops.placeholder."cloudflare-api-token-dns-edit-zone-read"}"
+        CF_API_TOKEN="${config.sops.placeholder."cloudflare-api-token-dns-edit-zone-read"}"
       '';
     };
 
-    security.acme = {
-      acceptTerms = true;
-      defaults.email = "suspen@outlook.sk";
+    nix.settings = {
+      experimental-features = [ "configurable-impure-env" ];
+      impure-env = "GOPROXY=https://goproxy.cn,direct";
     };
 
-    security.acme.certs."derp.aoran.eu.org" = {
-      dnsProvider = "cloudflare";
-      environmentFile = config.sops.templates."cloudflare-acme-env".path;
-      group = "caddy";
-      reloadServices = [ "caddy.service" ];
-
-      # https://github.com/go-acme/lego/discussions/3261
-      extraLegoFlags = [ "--dns.propagation.disable-rns" ];
+    services.caddy = {
+      enable = true;
+      email = "suspen@outlook.sk";
+      environmentFile = config.sops.templates."caddy-cloudflare-env".path;
+      package = pkgs.caddy.withPlugins {
+        plugins = [ "github.com/caddy-dns/cloudflare@v0.2.4" ];
+        hash = "sha256-tubXIDCJnO2mvdnPlZclwDhNGaeeYLSt7lnni3+pXDo=";
+      };
     };
-
-    services.caddy.enable = true;
 
     services.caddy.virtualHosts."https://derp.aoran.eu.org:33443".extraConfig = ''
-      tls /var/lib/acme/derp.aoran.eu.org/fullchain.pem \
-          /var/lib/acme/derp.aoran.eu.org/key.pem
+      tls {
+        dns cloudflare {env.CF_API_TOKEN}
+      }
       reverse_proxy 127.0.0.1:8081
     '';
-
-    systemd.services.caddy.after = [ "acme-derp.aoran.eu.org.service" ];
-    systemd.services.caddy.wants = [ "acme-derp.aoran.eu.org.service" ];
 
     services.tailscale.derper = {
       enable = true;

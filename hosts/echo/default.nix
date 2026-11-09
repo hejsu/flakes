@@ -45,10 +45,15 @@
     programs.nix-ld.enable = true;
 
     ## Magpie Podman Auto Update
-    systemd.timers.podman-auto-update = lib.mkIf config.modules.services.magpie.enable {
+    systemd.timers.podman-auto-update = {
       wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = [ "" "*-*-* 03:00:00" ];
+        Persistent = true;
+        RandomizedDelaySec = "15min";
+      };
     };
-    virtualisation.oci-containers.containers = lib.mkIf config.modules.services.magpie.enable {
+    virtualisation.oci-containers.containers = {
       magpie.labels."io.containers.autoupdate" = "registry";
     };
 
@@ -135,19 +140,11 @@
 
       ip6Domains = [ "echo.aoran.eu.org" ];
       provider.ipv4 = "none";
-      provider.ipv6 = "local.iface:eth0";
+      provider.ipv6 = "local";
 
       ttl = 60;
       proxied = "false";
       updateCron = "@every 5m";
-    };
-
-    systemd.services.cloudflare-ddns.serviceConfig = {
-      ProtectSystem = "strict";
-      ReadWritePaths = [ "/var/lib/cloudflare-ddns" ];
-      ProtectHome = true;
-      PrivateTmp = true;
-      NoNewPrivileges = true;
     };
 
     system.stateVersion = "26.11";
