@@ -16,14 +16,13 @@
   # Fast domestic mirrors
   nix.settings = {
     substituters = [
-      "https://mirrors.cernet.edu.cn/nix-channels/store"
-      "https://nix-community.cachix.org"
+      "https://suspen.cachix.org?priority=20"
+      "https://avoidtuna.mirrors.cernet.edu.cn/nix-channels/store"
       "https://cache.numtide.com"
     ];
     trusted-public-keys = [
-      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+      "suspen.cachix.org-1:RU+fX6MttiKajapdYBEOEbq/nuQGl5Qb8BTPTkLs4TU="
       "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
     ];
   };
 }
-
