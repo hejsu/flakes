@@ -15,11 +15,12 @@ concurrency:
 jobs:
   build:
     name: Cache ${{ matrix.system }}
-    # Same-repository PRs still require Environment approval before getting secrets.
+    # The update PAT runs as the owner; fork PRs and other actors are not trusted.
     if: >-
       github.ref == 'refs/heads/main' ||
       (github.event_name == 'pull_request' &&
-       github.event.pull_request.head.repo.full_name == github.repository)
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.actor == github.repository_owner)
     environment: ${{ github.event_name == 'pull_request' && 'nix-cache-pr' || 'nix-cache-main' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 180

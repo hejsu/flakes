@@ -4,8 +4,8 @@
 - Personal edits: test locally, commit as often as needed, then push the completed changes to =main=.
   A push starts preparation, without upgrading inputs. A clean snapshot proceeds to builds; a
   corrected Caddy hash becomes a repair PR instead of silently changing main or building stale input.
-- Dependency automation: create an update PR with Nix's lock-file change log; approve its cache jobs,
-  review the build results, then merge manually. Richer reports are planned. Merging starts a build
+- Dependency automation: create an update PR with Nix's lock-file change log; trusted cache jobs run
+  automatically. Review the build results, then merge manually. Richer reports are planned. Merging starts a build
   of the final =main= commit.
 - Same derivations reuse cached outputs. Different source snapshots or metadata can still require
   small generated outputs to be rebuilt; two workflow runs do not imply recompiling every package.
@@ -18,11 +18,13 @@
 checks the exact pushed snapshot without running =nix flake update=. If no hash correction is
 needed, it calls [[file:workflows/build.yml][Build and cache]] as a reusable workflow for that same commit. If a correction is
 needed, it creates/updates =automation/caddy-hash= and skips building the uncorrected main snapshot.
-The repair PR triggers the normal PR build, subject to approval; merging remains manual.
+The repair PR triggers the normal PR build automatically; merging remains manual.
 
 The build workflow also handles PRs targeting =main= directly. It does not independently listen to
-main pushes, so preparation and builds cannot race. Ordinary branch pushes, fork PRs, and manual
-runs on other branches are skipped. There are still only two workflow files.
+main pushes, so preparation and builds cannot race. PR cache jobs require a same-repository source
+branch and the repository owner as the triggering actor. The update PAT acts as that owner.
+Ordinary branch pushes, fork PRs, other actors, and manual runs on other branches are skipped.
+There are still only two workflow files.
 
 | Runner       | Platform       | System outputs |
 |--------------+----------------+----------------|
@@ -72,22 +74,21 @@ and unchanged here.
 3. In Settings -> Environments, create both environments below *before* running the workflow.
    Put =CACHIX_AUTH_TOKEN= in each environment's secrets, not in repository or organization secrets.
 
-| Environment    | Required protection                                     |
-|----------------+---------------------------------------------------------|
-| nix-cache-main | Selected branches/tags: allow only the branch =main=     |
-| nix-cache-pr   | Required reviewers: yourself; review each candidate run |
+| Environment    | Required protection                                          |
+|----------------+--------------------------------------------------------------|
+| nix-cache-main | Selected branches/tags: allow only the branch =main=          |
+| nix-cache-pr   | Allow =refs/pull/*/merge=; no required reviewers or wait timer |
 
-For =nix-cache-pr=, leave "Prevent self-review" disabled so the sole maintainer can approve their
-own runs. Restrict its allowed branches to =refs/pull/*/merge= if using selected-branch rules.
-Approval permits the candidate code to run with the cache write credential: review workflow and
-build-code changes before approving. Same-repository origin alone does not establish trust.
+Trusted PRs run automatically with the cache write credential. This is an explicit trust choice:
+the sole maintainer and the updater using their PAT are trusted to execute candidate code. The
+workflow checks both the triggering actor and source repository; same-repository origin alone is
+not the intended trust policy. A different bot identity would require revisiting that allowlist.
+This is not a boundary against a collaborator who can modify trusted workflows or main.
 
-GitHub applies Environment protection before jobs start and releases secrets only after approval.
-The workflow cannot configure those protections itself. Do not enable PR uploads if required
-reviewers are unavailable on your repository's GitHub plan/visibility; agree on a different gate
-first. Keep cache credentials out of repository/organization secrets so candidate workflows cannot
-obtain them without the corresponding Environment gate. Do not use =pull_request_target= to build
-candidate code with write credentials.
+Keep cache credentials in Environment secrets, not repository/organization secrets. GitHub must
+still restrict each Environment to the refs above; YAML does not configure those settings. Fork
+PRs receive no write credential. Do not use =pull_request_target= to build candidate code with
+write credentials. Human approval is reserved for merging and local activation, not starting CI.
 
 4. Commit and push the workflow when ready. Once it is on =main=, it can also be run through
    Actions -> Prepare configuration -> Run workflow, selecting =main= and mode =check= to test the
@@ -143,8 +144,8 @@ gh workflow run update.yml --repo hejsu/flakes --ref main -f mode=check
 gh workflow run update.yml --repo hejsu/flakes --ref main -f mode=check -f refresh-caddy=true
 #+end_src
 
-Review and approve the resulting PR's =nix-cache-pr= jobs, then merge manually after reviewing the
-results. The existing build workflow handles PR and post-merge caching. GitHub branch protection
+The resulting trusted PR builds and caches automatically. Review its results, then merge manually.
+The existing build workflow handles PR and post-merge caching. GitHub branch protection
 is not configured here, so a failed job is visible but does not itself prohibit merging.
 
 ** Automatic Caddy Hash Refresh
