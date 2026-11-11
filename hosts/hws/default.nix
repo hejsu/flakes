@@ -36,7 +36,6 @@
       restartUnits = [ "caddy.service" ];
       owner = "caddy";
       group = "caddy";
-      mode = "0400";
       content = ''
         CF_API_TOKEN="${config.sops.placeholder."cloudflare-api-token-dns-edit-zone-read"}"
       '';

@@ -1,0 +1,59 @@
+name: Update flake inputs
+
+on:
+  schedule:
+    - cron: '0 3 * * 0' # Sunday 11:00 Asia/Shanghai; GitHub schedules use UTC.
+  workflow_dispatch:
+    inputs:
+      inputs:
+        description: 'Inputs to update, space-separated; empty updates all (e.g. llm-agents)'
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flake-input-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Check update token
+        env:
+          TOKEN: ${{ secrets.FLAKE_UPDATE_TOKEN }}
+        run: ': "${TOKEN:?Set the FLAKE_UPDATE_TOKEN repository secret}"'
+
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+
+      - name: Update lock file and pull request
+        uses: DeterminateSystems/update-flake-lock@a6b01882e9290a55d390f352ff11664ceea1661a # Pinned upstream main.
+        with:
+          token: ${{ secrets.FLAKE_UPDATE_TOKEN }}
+          inputs: ${{ inputs.inputs }}
+          base: main
+          branch: automation/flake-update
+          commit-msg: 'chore: update flake inputs'
+          pr-title: 'chore: update flake inputs'
+          pr-body: |
+            ### Locked input changes
+            ```text
+            {{{ env.GIT_COMMIT_MESSAGE }}}
+            ```
+
+            Approve `nix-cache-pr` to build/cache, review, then merge manually.
+
+            <!-- update-report:start -->
+            Detailed analysis is not enabled yet. See the build and cache checks.
+            <!-- update-report:end -->

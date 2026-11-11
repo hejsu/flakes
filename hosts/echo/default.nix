@@ -1,6 +1,13 @@
 {
   system = "x86_64-linux";
 
+  includes = [
+    ./backup.nix
+    ./ddns.nix
+    ./lan.nix
+    ./singbox.nix
+  ];
+
   profiles = {
     user = "suspen";
     role = "server";
@@ -26,22 +33,21 @@
     services = {
       cliproxyapi = {
         enable = true;
-        ingress.tailnet = {
-          cpa.endpoints."tcp:80" = "tcp://127.0.0.1:8315";
-        };
+        ingress.tailnet.cpa.endpoints.
+          "tcp:80" = "tcp://127.0.0.1:8315";
       };
 
       magpie = {
         enable = true;
-        ingress.tailnet = {
-          magpie.endpoints."tcp:80" = "tcp://127.0.0.1:3430";
-          magpie-api.endpoints."tcp:80" = "tcp://127.0.0.1:3425";
-        };
+        ingress.tailnet.magpie.endpoints.
+          "tcp:80" = "tcp://127.0.0.1:3430";
+        ingress.tailnet.magpie-api.endpoints.
+          "tcp:80" = "tcp://127.0.0.1:3425";
       };
     };
   };
 
-  settings = { config, lib, pkgs, ... }: {
+  settings = { ... }: {
     programs.nix-ld.enable = true;
 
     ## Magpie Podman Auto Update
@@ -49,17 +55,11 @@
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnCalendar = [ "" "*-*-* 03:00:00" ];
-        Persistent = true;
-        RandomizedDelaySec = "15min";
       };
     };
     virtualisation.oci-containers.containers = {
       magpie.labels."io.containers.autoupdate" = "registry";
     };
-
-    # workaround on singbox tun and podman: https://github.com/SagerNet/sing-box/issues/2700
-    # But it's not necessary when using host networking
-    # networking.firewall.trustedInterfaces = [ "podman0" ];
 
     systemd.network.networks."10-eth0" = {
       matchConfig.Name = "eth0";
@@ -82,70 +82,7 @@
       };
     };
 
-    environment.etc."gai.conf".text = ''
-      precedence ::ffff:0:0/96 100
-    '';
-
-    sops.secrets = {
-      "restic-password" = { };
-      "s3-cstnet-ak" = { };
-      "s3-cstnet-sk" = { };
-    };
-
-    sops.templates."restic.env" = {
-      mode = "0400";
-      content = ''
-        AWS_ACCESS_KEY_ID="${config.sops.placeholder."s3-cstnet-ak"}"
-        AWS_SECRET_ACCESS_KEY="${config.sops.placeholder."s3-cstnet-sk"}"
-      '';
-    };
-
-    services.restic.backups.cpa = {
-      initialize = true;
-      repository = "s3:https://s3.cstcloud.cn/echo-restic";
-      environmentFile = config.sops.templates."restic.env".path;
-      passwordFile = config.sops.secrets."restic-password".path;
-      extraOptions = [ "s3.bucket-lookup=path" ];
-
-      paths = [
-        "/var/lib/private/cliproxyapi"
-        "/var/lib/private/cpa-usage-keeper"
-      ];
-
-      exclude = [
-        "/var/lib/private/cliproxyapi/auth/logs"
-        "/var/lib/private/cpa-usage-keeper/logs"
-      ];
-
-      pruneOpts = [ "--keep-daily 30" "--keep-weekly 12" "--keep-monthly 12" ];
-      runCheck = true;
-      checkOpts = [ "--read-data" ];
-    };
-
-    sops.secrets."cloudflare-api-token-dns-edit-zone-read" = { };
-
-    sops.templates."cloudflare-ddns-env" = {
-      restartUnits = [ "cloudflare-ddns.service" ];
-      owner = "cloudflare-ddns";
-      group = "cloudflare-ddns";
-      mode = "0440";
-      content = ''
-        CLOUDFLARE_API_TOKEN="${config.sops.placeholder."cloudflare-api-token-dns-edit-zone-read"}"
-      '';
-    };
-
-    services.cloudflare-ddns = {
-      enable = true;
-      credentialsFile = config.sops.templates."cloudflare-ddns-env".path;
-
-      ip6Domains = [ "echo.aoran.eu.org" ];
-      provider.ipv4 = "none";
-      provider.ipv6 = "local";
-
-      ttl = 60;
-      proxied = "false";
-      updateCron = "@every 5m";
-    };
+    networking.getaddrinfo.precedence."::ffff:0:0/96" = 100;
 
     system.stateVersion = "26.11";
   };

@@ -1,0 +1,132 @@
+#+title: Build and Cache
+
+* Agreed Workflow
+- Personal edits: test locally, commit as often as needed, then push the completed changes to =main=.
+  One push starts one workflow for its latest commit, even when it contains several commits.
+- Dependency automation: create an update PR with Nix's lock-file change log; approve its cache jobs,
+  review the build results, then merge manually. Richer reports are planned. Merging starts a build
+  of the final =main= commit.
+- Same derivations reuse cached outputs. Different source snapshots or metadata can still require
+  small generated outputs to be rebuilt; two workflow runs do not imply recompiling every package.
+- Upgrade manually after the main-branch cache job completes. An urgent local input update or switch
+  is always allowed; missing outputs can still build locally. Local builds are not automatically
+  uploaded to Cachix.
+
+* Current Implementation
+[[file:workflows/build.yml][Build and cache]] runs on PRs targeting =main=, pushes to =main=, and manual dispatches.
+Ordinary branch pushes do not trigger it. Fork PRs and manual runs on other branches are skipped.
+
+| Runner       | Platform       | System outputs |
+|--------------+----------------+----------------|
+| ubuntu-24.04 | x86_64-linux   | az, echo, hws  |
+| macos-15     | aarch64-darwin | rhayader       |
+
+Linux targets share one Nix store. A failed build skips the explicit final upload for that job;
+Cachix may already have uploaded successfully built dependencies. The other platform continues.
+The final upload is a separate step: a successful build alone does not mean the cache is ready.
+All Actions are pinned to commit SHAs.
+
+** CI Cache Sources
+| Cache                      | Purpose / evidence                                      |
+|----------------------------+---------------------------------------------------------|
+| cache.nixos.org            | Default official Nixpkgs cache; retained by the installer |
+| cache.numtide.com          | llm-agents' documented binary cache                      |
+| cache.thalheim.io          | Declared by sops-nix's flake and used in its CI           |
+| feel-co.cachix.org         | Public cache used by Hjem's documentation CI              |
+| CACHIX_CACHE               | This repository's own outputs and runtime closures       |
+
+Addresses and explicit keys were checked against the currently locked inputs; =feel-co='s public
+key was also checked with the Cachix API. Cachix configures that cache and key through =extraPullNames=.
+Hjem's documentation CI is evidence of upstream use, not a guarantee that our runtime outputs hit
+that cache. =nix-index-database= downloads its pre-generated database from a pinned GitHub release;
+it does not require adding =nix-community.cachix.org= for that download. No dedicated cache is added
+for nix-darwin, and no unrelated CUDA, editor, or desktop caches are enabled.
+
+The broad =nix-community= cache is intentionally omitted from CI; it is not synonymous with NUR.
+An upstream cache hit depends on the exact output, platform, and dependencies. Missing outputs can
+still build and enter the personal cache. Host cache settings are separate and unchanged here.
+
+* GitHub Setup: Required Before Enabling Uploads
+1. Create a Cachix cache and a write token scoped to that cache. Choose its visibility deliberately:
+   anyone who can read the cache can inspect uploaded store contents, including generated configs.
+   The official and community caches remain upstreams; this is not a mirror of all Nixpkgs.
+2. In repository Settings -> Secrets and variables -> Actions -> Variables, set =CACHIX_CACHE= to
+   the cache name (not its URL).
+3. In Settings -> Environments, create both environments below *before* running the workflow.
+   Put =CACHIX_AUTH_TOKEN= in each environment's secrets, not in repository or organization secrets.
+
+| Environment    | Required protection                                     |
+|----------------+---------------------------------------------------------|
+| nix-cache-main | Selected branches/tags: allow only the branch =main=     |
+| nix-cache-pr   | Required reviewers: yourself; review each candidate run |
+
+For =nix-cache-pr=, leave "Prevent self-review" disabled so the sole maintainer can approve their
+own runs. Restrict its allowed branches to =refs/pull/*/merge= if using selected-branch rules.
+Approval permits the candidate code to run with the cache write credential: review workflow and
+build-code changes before approving. Same-repository origin alone does not establish trust.
+
+GitHub applies Environment protection before jobs start and releases secrets only after approval.
+The workflow cannot configure those protections itself. Do not enable PR uploads if required
+reviewers are unavailable on your repository's GitHub plan/visibility; agree on a different gate
+first. Keep cache credentials out of repository/organization secrets so candidate workflows cannot
+obtain them without the corresponding Environment gate. Do not use =pull_request_target= to build
+candidate code with write credentials.
+
+4. Commit and push the workflow when ready. Once it is on =main=, it can also be run through
+   Actions -> Build and cache -> Run workflow, selecting =main=.
+5. Check both platforms' build, final upload, and Cachix post-job steps. Fix failures and rerun the
+   failed jobs as needed. No activation or deployment is performed by this workflow.
+
+The Nix installer permits CI substitutions for =allowSubstitutes = false= derivations; local
+substitution policy is unchanged. No production SOPS keys are needed. Only the committed snapshot
+and its lock file are built; local uncommitted or untracked files are not sent to the runner.
+
+* Dependency Update PRs
+[[file:workflows/update.yml][Update flake inputs]] runs weekly on Sunday at 03:00 UTC (11:00 Asia/Shanghai), or manually on
+=main=. Scheduled jobs can be delayed by GitHub. The updater performs no system builds and needs
+no Cachix write credentials.
+
+- Empty =inputs=: update all inputs.
+- Space-separated input names, e.g. =llm-agents= or =hjem darwin=: request updates to those inputs.
+  Input handling is delegated to the upstream Action and Nix. Indirect lock changes can still occur
+  when an input's dependencies change or its references need reconciliation.
+- Changed locks create or update a single PR from =automation/flake-update= to =main=. No lock
+  difference means no new update PR is needed. The upstream action manages the branch lifecycle.
+- Each run starts from the latest =main=; it does not accumulate pending updates from an earlier
+  unmerged PR. Reserve the automation branch for the updater, not unrelated manual commits.
+- The separate =FLAKE_UPDATE_TOKEN= repository secret must be a token restricted to this repository
+  with Contents and Pull requests read/write permissions. Default =GITHUB_TOKEN= PR creation does
+  not normally trigger another Actions workflow. No automatic merge or activation is configured.
+- The first report contains Nix's input/revision/date change log. Package versions, upstream
+  comparison links, and selected-module effects are still a separate reporting step.
+- The PR body reserves =<!-- update-report:start -->= / =<!-- update-report:end -->= for the future
+  report writer. These are placeholders only; no report generation or LLM call runs yet.
+
+After committing and pushing both workflows, a manual update can be requested with:
+#+begin_src sh
+gh workflow run update.yml --repo hejsu/flakes --ref main
+# Or update only llm-agents:
+gh workflow run update.yml --repo hejsu/flakes --ref main -f inputs=llm-agents
+#+end_src
+
+Review and approve the resulting PR's =nix-cache-pr= jobs, then merge manually after reviewing the
+results. The existing build workflow handles PR and post-merge caching. GitHub branch protection
+is not configured here, so a failed job is visible but does not itself prohibit merging.
+
+** Future Report Layer
+Keep reporting separate from updating and caching. After both platform jobs finish, a separately
+scoped report job should update the reserved PR-body block on success or failure, provided the
+candidate commit is still current. It must not require builds to succeed before explaining a
+failure. LLM/API failures should leave the raw checks and logs available, not block cache uploads.
+An edit pushed to the PR branch automatically triggers another build; retrying an unchanged run is
+mainly useful for transient infrastructure failures. None of this reporting is implemented yet.
+
+* Next Steps
+- [ ] Configure client substituters/public keys, including Determinate Nix's =nix.custom.conf=,
+  and verify a real cache download. Uploading alone does not enable local consumption.
+- [X] Add weekly/manual dependency-update PRs, with optional input selection such as =llm-agents=.
+- [ ] Add input/package/selected-module change reports, using separately scoped reporting permissions.
+- [ ] Measure cache storage and download performance, then choose retention for recent systems.
+
+Homebrew, runtime container images/subscriptions, production state, automatic merges, automatic
+activation, extra VM/integration tests, and a separate release branch are outside this first step.

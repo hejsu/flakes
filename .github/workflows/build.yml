@@ -1,0 +1,82 @@
+name: Build and cache
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Cache ${{ matrix.system }}
+    # Same-repository PRs still require Environment approval before getting secrets.
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
+    environment: ${{ github.event_name == 'pull_request' && 'nix-cache-pr' || 'nix-cache-main' }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - system: x86_64-linux
+            runner: ubuntu-24.04
+            targets: >-
+              .#nixosConfigurations.az.config.system.build.toplevel
+              .#nixosConfigurations.echo.config.system.build.toplevel
+              .#nixosConfigurations.hws.config.system.build.toplevel
+          - system: aarch64-darwin
+            runner: macos-15
+            targets: .#darwinConfigurations.rhayader.config.system.build.toplevel
+
+    env:
+      CACHE: ${{ vars.CACHIX_CACHE }}
+      TARGETS: ${{ matrix.targets }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check settings
+        env:
+          TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        run: |
+          : "${CACHE:?Set the CACHIX_CACHE repository variable}"
+          : "${TOKEN:?Set the CACHIX_AUTH_TOKEN environment secret}"
+
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+        with:
+          extra_nix_config: |
+            extra-substituters = https://cache.numtide.com https://cache.thalheim.io
+            extra-trusted-public-keys = niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g= cache.thalheim.io-1:R7msbosLEZKrxk/lKxf9BTjOOH7Ax3H0Qj0/6wiHOgc=
+
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        with:
+          name: ${{ env.CACHE }}
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          extraPullNames: feel-co
+
+      - name: Build
+        run: |
+          read -r -a targets <<< "$TARGETS"
+          nix build -L --no-update-lock-file \
+            --out-link "$RUNNER_TEMP/result" "${targets[@]}"
+
+      - name: Upload system closures
+        run: cachix push "$CACHE" "$RUNNER_TEMP"/result*

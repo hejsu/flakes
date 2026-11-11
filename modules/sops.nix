@@ -33,7 +33,6 @@ let cfg = config.modules.sops; in {
 
       age = {
         keyFile = cfg.ageKeyFile;
-        generateKey = false;
         sshKeyPaths = [ ];
       };
       gnupg.sshKeyPaths = [ ];
