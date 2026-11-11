@@ -18,7 +18,6 @@ let cfg = config.modules.services.magpie; in {
     sops.secrets."magpie-web-key" = { };
 
     sops.templates."magpie.env" = {
-      mode = "0400";
       restartUnits = [ "${config.virtualisation.oci-containers.containers.magpie.serviceName}.service" ];
       content = ''
         MAGPIE_WEB_KEY=${config.sops.placeholder."magpie-web-key"}
@@ -27,10 +26,7 @@ let cfg = config.modules.services.magpie; in {
 
     virtualisation.oci-containers.containers.magpie = {
       image = "ghcr.io/yetone/magpie:latest";
-      autoStart = true;
-
-      # WORKAROUND: https://github.com/SagerNet/sing-box/issues/2700
-      extraOptions = [ "--network=host" ];
+      networks = [ "host" ];
       environment.MAGPIE_ADDR = "127.0.0.1:3425";
       environmentFiles = [ config.sops.templates."magpie.env".path ];
       volumes = [ "/var/lib/magpie:/config" ];

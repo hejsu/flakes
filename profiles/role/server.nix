@@ -9,9 +9,6 @@
     options = "--delete-older-than 7d";
   };
 
-  # Weekly TRIM (SSD/VPS-friendly)
-  services.fstrim.enable = true;
-
   virtualisation.oci-containers.backend = "podman";
 
   # Unified wired networking for servers. systemd-networkd applies only the

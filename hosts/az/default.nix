@@ -22,10 +22,7 @@
   ## Local config
   settings = { ... }: {
     networking = {
-      enableIPv6 = true;
-
       firewall = {
-        enable = true;
         allowedTCPPorts = [ 22 80 443 ];
       };
     };
