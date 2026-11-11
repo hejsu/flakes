@@ -31,17 +31,19 @@ jobs:
         include:
           - system: x86_64-linux
             runner: ubuntu-24.04
-            targets: >-
-              .#nixosConfigurations.az.config.system.build.toplevel
-              .#nixosConfigurations.echo.config.system.build.toplevel
-              .#nixosConfigurations.hws.config.system.build.toplevel
+            configurations: nixosConfigurations
           - system: aarch64-darwin
             runner: macos-15
-            targets: .#darwinConfigurations.rhayader.config.system.build.toplevel
+            configurations: darwinConfigurations
 
     env:
       CACHE: ${{ vars.CACHIX_CACHE }}
-      TARGETS: ${{ matrix.targets }}
+      SYSTEM: ${{ matrix.system }}
+      CONFIGURATIONS: ${{ matrix.configurations }}
+      # Apply after cachix use writes user-level substituters/public keys.
+      NIX_CONFIG: |
+        extra-substituters = https://cache.numtide.com https://cache.thalheim.io
+        extra-trusted-public-keys = niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g= cache.thalheim.io-1:R7msbosLEZKrxk/lKxf9BTjOOH7Ax3H0Qj0/6wiHOgc=
 
     defaults:
       run:
@@ -60,10 +62,6 @@ jobs:
           : "${TOKEN:?Set the CACHIX_AUTH_TOKEN environment secret}"
 
       - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
-        with:
-          extra_nix_config: |
-            extra-substituters = https://cache.numtide.com https://cache.thalheim.io
-            extra-trusted-public-keys = niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g= cache.thalheim.io-1:R7msbosLEZKrxk/lKxf9BTjOOH7Ax3H0Qj0/6wiHOgc=
 
       - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
         with:
@@ -71,11 +69,40 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           extraPullNames: feel-co,nix-community
 
-      - name: Build
+      - name: Show active caches
+        run: nix config show --json | jq -r '.substituters.value[]'
+
+      - name: Discover hosts for this platform
+        id: hosts
         run: |
-          read -r -a targets <<< "$TARGETS"
+          nix eval --json --no-update-lock-file ".#$CONFIGURATIONS" --apply \
+            "configs: builtins.filter (name: (builtins.getAttr name configs).pkgs.stdenv.hostPlatform.system == \"$SYSTEM\") (builtins.attrNames configs)" \
+            > "$RUNNER_TEMP/hosts.json"
+          jq -r --arg configs "$CONFIGURATIONS" \
+            '.[] | ".#\($configs).\(. | tojson).config.system.build.toplevel"' \
+            "$RUNNER_TEMP/hosts.json" > "$RUNNER_TEMP/targets"
+          echo "count=$(jq length "$RUNNER_TEMP/hosts.json")" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/targets"
+
+      - name: Build
+        if: steps.hosts.outputs.count != '0'
+        run: |
+          targets=()
+          while IFS= read -r target; do targets+=("$target"); done < "$RUNNER_TEMP/targets"
           nix build -L --no-update-lock-file \
             --out-link "$RUNNER_TEMP/result" "${targets[@]}"
 
       - name: Upload system closures
+        if: steps.hosts.outputs.count != '0'
         run: cachix push "$CACHE" "$RUNNER_TEMP"/result*
+
+      - name: Keep the latest main system for each host
+        if: github.ref == 'refs/heads/main' && steps.hosts.outputs.count != '0'
+        run: |
+          index=0
+          while IFS= read -r host; do
+            result="$RUNNER_TEMP/result"
+            if (( index > 0 )); then result+="-$index"; fi
+            cachix pin "$CACHE" "main-$host" "$result" --keep-revisions 1
+            index=$((index + 1))
+          done < <(jq -r '.[]' "$RUNNER_TEMP/hosts.json")

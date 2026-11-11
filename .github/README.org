@@ -31,6 +31,12 @@ There are still only two workflow files.
 | ubuntu-24.04 | x86_64-linux   | az, echo, hws  |
 | macos-15     | aarch64-darwin | rhayader       |
 
+These are the current hosts, not a CI allowlist. Each runner reads the corresponding Flake output
+(=nixosConfigurations= or =darwinConfigurations=), filters by the exact target platform, and saves
+one ordered host list for building and pinning. New hosts on these two platforms are discovered
+automatically; new architectures still need a matching runner. An empty host list skips building,
+uploading, and pinning. Discovery errors fail the job rather than silently skipping hosts.
+
 Linux targets share one Nix store. A failed build skips the explicit final upload for that job;
 Cachix may already have uploaded successfully built dependencies. The other platform continues.
 The final upload is a separate step: a successful build alone does not mean the cache is ready.
@@ -48,6 +54,9 @@ All Actions are pinned to commit SHAs.
 
 Addresses and explicit keys were checked against the currently locked inputs; =feel-co='s public
 key was also checked with the Cachix API. Cachix configures that cache and key through =extraPullNames=.
+Numtide/Thalheim additions use =NIX_CONFIG= so Cachix's later user-level =substituters= and
+=trusted-public-keys= settings cannot override them. CI prints only the final cache URLs, not the
+full settings (which can contain credentials).
 Hjem's documentation CI is evidence of upstream use, not a guarantee that our runtime outputs hit
 that cache. =nix-index-database= downloads its pre-generated database from a pinned GitHub release;
 it does not require adding =nix-community.cachix.org= for that download. No dedicated cache is added
@@ -64,6 +73,20 @@ uploading paths already available from =cache.nixos.org=. Third-party paths need
 uploaded system closure can be served by the personal cache, subject to retention and availability.
 This does not guarantee caching every build-time-only dependency. Host cache settings are separate
 and unchanged here.
+
+** Cache Retention
+After a main-branch platform build and explicit closure upload succeed, CI updates one stable
+=main-<host>= pin per discovered host (currently az, echo, hws, and rhayader). Each pin
+uses =--keep-revisions 1=: only the latest successfully pinned revision remains protected, not an
+ever-growing list of commit-specific releases. PR builds never update these pins; a failed build
+or explicit upload skips pinning. Pin errors fail the job rather than silently claiming retention.
+
+Pins protect retained system outputs from Cachix GC; they do not reserve extra quota or retain
+build-time-only toolchains. Older unpinned outputs become eligible for normal Cachix GC, not
+immediately deleted by CI. Monitor the compressed retained data: pinning cannot make a working set
+larger than the 5 GB allowance fit. This step does not change the existing upload policy or run GC.
+Removing or renaming a host does not delete its existing remote pin; retire that pin explicitly
+in Cachix when the old host is no longer needed.
 
 * GitHub Setup: Required Before Enabling Uploads
 1. Create a Cachix cache and a write token scoped to that cache. Choose its visibility deliberately:
