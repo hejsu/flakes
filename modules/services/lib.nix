@@ -62,6 +62,12 @@ in
       };
     };
 
+    # Apply Serve configuration once the Tailnet is ready.
+    systemd.services.tailscale-serve = lib.mkIf (ingress.tailnet != { }) {
+      requires = [ "tailscale-online.target" ];
+      after = [ "tailscale-online.target" ];
+    };
+
     services.caddy = lib.mkIf (ingress.caddy != { }) {
       enable = true;
       virtualHosts = lib.mkAliasDefinitions options.modules.ingress.caddy;

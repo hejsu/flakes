@@ -1,5 +1,6 @@
 keys:
-  - &local age1alcjc6ee8lwlukf4ndqdcjct43ee5k2t6h4zsukxdkd7kph5fdrs9s95fe
+  - &se    age1se1qdcylfv526lvt0rtz9sylj5nsc7gwvjgla6ruwv7gqp64h2p8h4z2utwew9
+  - &local age13nczvwu3rwejl0x8u9n7dqxh39dhv8u28ywqq7vte9jzy5pygp4qvgfz86
   - &azure age183puvw68raq7twehq0gsz9c6hq0m8ze0sctt8mskj7ms2qhh33ls5feddg
   - &echo  age15qxamscjw2j42dckh30wtawdx38tdektgdtnlhqtme2q32qe5v8q7nk0cx
   - &hws   age1y8gefdzn4e2dfg0t20n30wdk2s9p9vssdm9eacp6l8mfgpzdmqtqw6pywf
@@ -8,18 +9,19 @@ creation_rules:
     key_groups:
     - age:
       - *echo
-      - *local
+      - *se
   - path_regex: hosts/az/assets/.*
     key_groups:
     - age:
       - *azure
-      - *local
+      - *se
   - path_regex: hosts/hws/assets/.*
     key_groups:
     - age:
       - *hws
-      - *local
-  - path_regex: hosts/[^/]+/assets/.*
+      - *se
+  - path_regex: hosts/rhayader/assets/.*
     key_groups:
     - age:
       - *local
+      - *se

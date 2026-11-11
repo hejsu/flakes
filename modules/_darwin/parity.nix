@@ -49,6 +49,18 @@
       description = "Parity shim for shared Linux Serve wiring; unused on darwin.";
     };
 
+    security.pam.rssh.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Parity shim for Linux SSH agent PAM authentication; unused on darwin.";
+    };
+
+    security.pam.services.sudo.rssh = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Parity shim for Linux sudo SSH agent authentication; unused on darwin.";
+    };
+
     users.defaultUserShell = lib.mkOption {
       type = lib.types.nullOr lib.types.package;
       default = null;

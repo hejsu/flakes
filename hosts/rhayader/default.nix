@@ -7,14 +7,17 @@
     networks = [ "ucas" ];
   };
 
-  modules = {
+  modules = { config } : {
     apps = {
       emacs.enable = true;
       kitty.enable = true;
       zed.enable = true;
     };
 
-    sops.enable = true;
+    sops = {
+      enable = true;
+      ageKeyFile = "/var/db/age/keys.txt";
+    };
 
     shell = {
       fish.enable = true;
@@ -36,7 +39,13 @@
 
     system.stateVersion = 6;
 
+    # Config-generated drvs (e.g. darwin-system) change hash on every edit, so
+    # binary-cache lookups can never hit; build them locally instead.
+    system.systemBuilderArgs = { allowSubstitutes = false; };
+
     home.sessionVariables = {
+      SOPS_AGE_KEY_FILE = "${config.home.configDir}/sops/age/se-identity.txt";
+
       SSH_AUTH_SOCK = "${config.home.dir}/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh";
       VSCODE_CLI_DATA_DIR = "${config.home.dir}/Applications/vscode/code-portable-data/cli-data";
     };
@@ -75,9 +84,13 @@
       (pkgs.writeShellScriptBin "ucas-ipv6-ctl"
         (builtins.readFile ./assets/ucas-ipv6-ctl.sh))
 
+      self.inputs.llm-agents.packages.antigravity-cli
+
       (pkgs.writeShellScriptBin "opencode" ''
         exec ${self.inputs.llm-agents.packages.opencode2}/bin/opencode2 "$@"
       '')
+
+      age-plugin-se
     ];
 
     homebrew = {

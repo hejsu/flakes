@@ -1,0 +1,235 @@
+#+title: Build and Cache
+
+* Agreed Workflow
+- Personal edits: test locally, commit as often as needed, then push the completed changes to =main=.
+  A push starts preparation, without upgrading inputs. A clean snapshot proceeds to builds; a
+  corrected Caddy hash becomes a repair PR instead of silently changing main or building stale input.
+- Dependency automation: create an update PR with Nix's lock-file change log; trusted cache jobs run
+  automatically. Review the build results, then merge manually. Richer reports are planned. Merging starts a build
+  of the final =main= commit.
+- Same derivations reuse cached outputs. Different source snapshots or metadata can still require
+  small generated outputs to be rebuilt; two workflow runs do not imply recompiling every package.
+- Upgrade manually after the main-branch cache job completes. An urgent local input update or switch
+  is always allowed; missing outputs can still build locally. Local builds are not automatically
+  uploaded to Cachix.
+
+* Current Implementation
+[[file:workflows/update.yml][Prepare configuration]] owns main-branch pushes, schedules, and manual dispatches. On pushes it
+checks the exact pushed snapshot without running =nix flake update=. If no hash correction is
+needed, it calls [[file:workflows/build.yml][Build and cache]] as a reusable workflow for that same commit. If a correction is
+needed, it creates/updates =automation/caddy-hash= and skips building the uncorrected main snapshot.
+The repair PR triggers the normal PR build automatically; merging remains manual.
+
+The build workflow also handles PRs targeting =main= directly. It does not independently listen to
+main pushes, so preparation and builds cannot race. PR cache jobs require a same-repository source
+branch and the repository owner as the triggering actor. The update PAT acts as that owner.
+Ordinary branch pushes, fork PRs, other actors, and manual runs on other branches are skipped.
+There are still only two workflow files.
+
+| Runner       | Platform       | System outputs |
+|--------------+----------------+----------------|
+| ubuntu-24.04 | x86_64-linux   | az, echo, hws  |
+| macos-15     | aarch64-darwin | rhayader       |
+
+These are the current hosts, not a CI allowlist. Each runner reads the corresponding Flake output
+(=nixosConfigurations= or =darwinConfigurations=), filters by the exact target platform, and saves
+one ordered host list for building and pinning. New hosts on these two platforms are discovered
+automatically; new architectures still need a matching runner. An empty host list skips building,
+uploading, and pinning. Discovery errors fail the job rather than silently skipping hosts.
+
+Linux targets share one Nix store. A failed build skips the explicit final upload for that job;
+Cachix may already have uploaded successfully built dependencies. The other platform continues.
+The final upload is a separate step: a successful build alone does not mean the cache is ready.
+All Actions are pinned to commit SHAs.
+
+** CI Cache Sources
+| Cache                      | Purpose / evidence                                      |
+|----------------------------+---------------------------------------------------------|
+| cache.nixos.org            | Default official Nixpkgs cache; retained by the installer |
+| cache.numtide.com          | llm-agents' documented binary cache                      |
+| cache.thalheim.io          | Declared by sops-nix's flake and used in its CI           |
+| feel-co.cachix.org         | Public cache used by Hjem's documentation CI              |
+| nix-community.cachix.org   | Swift build dependencies absent from the official cache  |
+| CACHIX_CACHE               | This repository's own outputs and runtime closures       |
+
+Addresses and explicit keys were checked against the currently locked inputs; =feel-co='s public
+key was also checked with the Cachix API. Cachix configures that cache and key through =extraPullNames=.
+Numtide/Thalheim additions use =NIX_CONFIG= so Cachix's later user-level =substituters= and
+=trusted-public-keys= settings cannot override them. CI prints only the final cache URLs, not the
+full settings (which can contain credentials).
+Hjem's documentation CI is evidence of upstream use, not a guarantee that our runtime outputs hit
+that cache. =nix-index-database= downloads its pre-generated database from a pinned GitHub release;
+it does not require adding =nix-community.cachix.org= for that download. No dedicated cache is added
+for nix-darwin, and no unrelated CUDA, editor, or desktop caches are enabled.
+
+The =nix-community= cache is not synonymous with NUR. The first Darwin CI run compiled Swift
+dependencies for =age-plugin-se= that were absent from the official cache but available from
+=nix-community=; the local Mac's matching Swift outputs also carried its signatures. Keep it in CI
+to avoid that cold build. An upstream cache hit depends on the exact output, platform, and
+dependencies. Missing outputs can still build and enter the personal cache.
+
+Clients should keep at least the official cache and =suspen.cachix.org=: Cachix normally skips
+uploading paths already available from =cache.nixos.org=. Third-party paths needed by a successfully
+uploaded system closure can be served by the personal cache, subject to retention and availability.
+This does not guarantee caching every build-time-only dependency. Host cache settings are separate
+and unchanged here.
+
+** Cache Retention
+After a main-branch platform build and explicit closure upload succeed, CI updates one stable
+=main-<host>= pin per discovered host (currently az, echo, hws, and rhayader). Each pin
+uses =--keep-revisions 1=: only the latest successfully pinned revision remains protected, not an
+ever-growing list of commit-specific releases. PR builds never update these pins; a failed build
+or explicit upload skips pinning. Pin errors fail the job rather than silently claiming retention.
+
+Pins protect retained system outputs from Cachix GC; they do not reserve extra quota or retain
+build-time-only toolchains. Older unpinned outputs become eligible for normal Cachix GC, not
+immediately deleted by CI. Monitor the compressed retained data: pinning cannot make a working set
+larger than the 5 GB allowance fit. This step does not change the existing upload policy or run GC.
+Removing or renaming a host does not delete its existing remote pin; retire that pin explicitly
+in Cachix when the old host is no longer needed.
+
+* GitHub Setup: Required Before Enabling Uploads
+1. Create a Cachix cache and a write token scoped to that cache. Choose its visibility deliberately:
+   anyone who can read the cache can inspect uploaded store contents, including generated configs.
+   The official and community caches remain upstreams; this is not a mirror of all Nixpkgs.
+2. In repository Settings -> Secrets and variables -> Actions -> Variables, set =CACHIX_CACHE= to
+   the cache name (not its URL).
+3. In Settings -> Environments, create both environments below *before* running the workflow.
+   Put =CACHIX_AUTH_TOKEN= in each environment's secrets, not in repository or organization secrets.
+
+| Environment    | Required protection                                          |
+|----------------+--------------------------------------------------------------|
+| nix-cache-main | Selected branches/tags: allow only the branch =main=          |
+| nix-cache-pr   | Allow =refs/pull/*/merge=; no required reviewers or wait timer |
+
+Trusted PRs run automatically with the cache write credential. This is an explicit trust choice:
+the sole maintainer and the updater using their PAT are trusted to execute candidate code. The
+workflow checks both the triggering actor and source repository; same-repository origin alone is
+not the intended trust policy. A different bot identity would require revisiting that allowlist.
+This is not a boundary against a collaborator who can modify trusted workflows or main.
+
+Keep cache credentials in Environment secrets, not repository/organization secrets. GitHub must
+still restrict each Environment to the refs above; YAML does not configure those settings. Fork
+PRs receive no write credential. Do not use =pull_request_target= to build candidate code with
+write credentials. Human approval is reserved for merging and local activation, not starting CI.
+
+4. Commit and push the workflow when ready. Once it is on =main=, it can also be run through
+   Actions -> Prepare configuration -> Run workflow, selecting =main= and mode =check= to test the
+   current lock without upgrading, or mode =update= to prepare dependency updates.
+5. Check both platforms' build, final upload, and Cachix post-job steps. Fix failures and rerun the
+   failed jobs as needed. No activation or deployment is performed by this workflow.
+
+The Nix installer permits CI substitutions for =allowSubstitutes = false= derivations; local
+substitution policy is unchanged. No production SOPS keys are needed. Only the committed snapshot
+and its lock file are built; local uncommitted or untracked files are not sent to the runner.
+
+* Dependency Update PRs
+[[file:workflows/update.yml][Prepare configuration]] updates inputs weekly on Sunday at 03:00 UTC (11:00 Asia/Shanghai), or
+manually on =main= in mode =update= (the manual default). Pushes and mode =check= never upgrade the
+lock. Scheduled jobs can be delayed by GitHub. Preparation needs no Cachix write credentials; the
+separate build jobs obtain those through their protected Environments.
+The reusable build declares =CACHIX_AUTH_TOKEN= and its caller explicitly passes that secret name;
+the build job's =nix-cache-main= Environment supplies the value. Without this forwarding, GitHub
+resolves the secret to an empty string even when it exists in the selected Environment. The update
+PAT is not forwarded to the build jobs.
+
+The workflow calls [[file:scripts/update-inputs.py][update-inputs.py]] once. In update mode it records the recipe, updates the lock,
+then compares and conditionally refreshes/verifies Caddy. On a push it compares against the previous
+pushed commit, if available. Without a baseline (first push, rewritten history, or manual check),
+it refreshes conservatively with =nix-update=. An unchanged push baseline is skipped only when its
+Linux cache check succeeded; otherwise the hash is checked so a pre-existing failure is not ignored.
+Reporting remains a separate step. The PR action's existing output decides what happens
+next: a repair PR triggers candidate builds; no repair PR allows building the original snapshot.
+
+- Empty =inputs=: update all inputs.
+- Space-separated input names, e.g. =llm-agents= or =hjem darwin=: request updates to those inputs.
+  Input handling is delegated to Nix. Indirect lock changes can still occur
+  when an input's dependencies change or its references need reconciliation.
+- Dependency changes create or update =automation/flake-update=; push/check hash repairs use the
+  separate =automation/caddy-hash= branch so a repair does not replace a pending dependency update.
+  No difference means no new PR is needed. =create-pull-request= manages the branch
+  lifecycle and only stages =flake.lock= and =hosts/hws/default.nix=. Nix commits lock changes in
+  the temporary runner checkout; the action includes that commit and any hash correction in the PR.
+- Each run starts from the latest =main=; it does not accumulate pending updates from an earlier
+  unmerged PR. Reserve the automation branch for the updater, not unrelated manual commits.
+- The separate =FLAKE_UPDATE_TOKEN= repository secret must be a token restricted to this repository
+  with Contents and Pull requests read/write permissions. Default =GITHUB_TOKEN= PR creation does
+  not normally trigger another Actions workflow. No automatic merge or activation is configured.
+- The first report contains Nix's input/revision/date change log and any Caddy hash change. Package
+  versions, upstream comparison links, and selected-module effects are still a separate reporting step.
+- The PR body reserves =<!-- update-report:start -->= / =<!-- update-report:end -->= for the future
+  report writer. These are placeholders only; no report generation or LLM call runs yet.
+
+After committing and pushing both workflows, a manual update can be requested with:
+#+begin_src sh
+gh workflow run update.yml --repo hejsu/flakes --ref main
+# Or update only llm-agents:
+gh workflow run update.yml --repo hejsu/flakes --ref main -f inputs=llm-agents
+# Check/repair current main without upgrading any input:
+gh workflow run update.yml --repo hejsu/flakes --ref main -f mode=check
+# Recompute Caddy's hash even if its declared inputs are unchanged:
+gh workflow run update.yml --repo hejsu/flakes --ref main -f mode=check -f refresh-caddy=true
+#+end_src
+
+The resulting trusted PR builds and caches automatically. Review its results, then merge manually.
+The existing build workflow handles PR and post-merge caching. GitHub branch protection
+is not configured here, so a failed job is visible but does not itself prohibit merging.
+
+** Automatic Caddy Hash Refresh
+The update script keeps the original recipe in memory and, only when needed, invokes =nix-update=
+followed by source verification. It does not implement hash discovery, parse build errors, or edit
+Nix files itself.
+
+Compare hws's Caddy source =drvPath= against the baseline described above. This only evaluates the
+derivation: it does not build or fetch the plugin dependencies. If the path is unchanged, skip
+prefetching and verification. A changed derivation means its hash needs checking, not necessarily
+that the hash will change. This detects changes to Go/build inputs too, unlike a version-only check.
+Use the manual =refresh-caddy= input to bypass the skip when repairing an already stale hash or
+rechecking external dependency drift that is not represented in the derivation. Evaluation errors
+stop the update rather than being treated as "unchanged".
+
+The cheap comparison detects changes, not arbitrary external dependency drift. A failed or missing
+Linux check triggers a conservative hash refresh, without downloading old CI logs. Manual mode
+=check= or the force option can also recheck the current hash. An unchanged recipe does not prove
+the entire system is valid; complete builds still follow preparation.
+
+When needed, use [[https://github.com/Mic92/nix-update][nix-update]] from the locked Nixpkgs input, not a custom hash-parsing script.
+=--version=skip --src-only= refreshes only the source hash of hws's configured Caddy package.
+=--override-filename= directs the edit to the host file rather than Nixpkgs' read-only store source.
+The workflow then builds =package.src= with the new hash before creating the PR; failures stop the
+update. Full Caddy compilation and plugin checks remain in =build.yml=.
+
+The tool computes hashes with a placeholder build internally. It does not upgrade the plugin
+version, automatically merge, or establish the safety of newly fetched dependencies. Hash diffs
+appear in the PR alongside the lock changes. The same command works with a native or remote
+x86_64-linux builder:
+#+begin_src sh
+nix run --no-update-lock-file --inputs-from . nixpkgs#nix-update -- \
+  --flake --version=skip --src-only --system x86_64-linux \
+  --override-filename hosts/hws/default.nix \
+  nixosConfigurations.hws.config.services.caddy.package
+#+end_src
+
+Direct pushes to =main= are never rewritten. Preflight either passes the exact commit to the build
+workflow, or publishes the hash fix as a PR and leaves main builds skipped until a corrected commit
+is merged. A successful preparation alone is not a successful system build: check the called build
+jobs or repair PR before upgrading. No automatic merge or deployment is enabled. A Mac without a
+Linux builder cannot compute this Linux-specific source output locally.
+
+** Future Report Layer
+Keep reporting separate from updating and caching. After both platform jobs finish, a separately
+scoped report job should update the reserved PR-body block on success or failure, provided the
+candidate commit is still current. It must not require builds to succeed before explaining a
+failure. LLM/API failures should leave the raw checks and logs available, not block cache uploads.
+An edit pushed to the PR branch automatically triggers another build; retrying an unchanged run is
+mainly useful for transient infrastructure failures. None of this reporting is implemented yet.
+
+* Next Steps
+- [ ] Configure client substituters/public keys, including Determinate Nix's =nix.custom.conf=,
+  and verify a real cache download. Uploading alone does not enable local consumption.
+- [X] Add weekly/manual dependency-update PRs, with optional input selection such as =llm-agents=.
+- [ ] Add input/package/selected-module change reports, using separately scoped reporting permissions.
+- [ ] Measure cache storage and download performance, then choose retention for recent systems.
+
+Homebrew, runtime container images/subscriptions, production state, automatic merges, automatic
+activation, extra VM/integration tests, and a separate release branch are outside this first step.

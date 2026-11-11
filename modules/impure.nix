@@ -21,6 +21,10 @@ let
     runtimeInputs = [
       pkgs.coreutils
     ];
+    derivationArgs = {
+      allowSubstitutes = false;
+      preferLocalBuild = true;
+    };
     text = ''
       # Avoid running hjem-impure if system is already impure
       IMPURE_ACTIVE_FILE="${impureActiveFile}"
