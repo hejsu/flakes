@@ -2,7 +2,8 @@
 
 * Agreed Workflow
 - Personal edits: test locally, commit as often as needed, then push the completed changes to =main=.
-  One push starts one workflow for its latest commit, even when it contains several commits.
+  A push starts preparation, without upgrading inputs. A clean snapshot proceeds to builds; a
+  corrected Caddy hash becomes a repair PR instead of silently changing main or building stale input.
 - Dependency automation: create an update PR with Nix's lock-file change log; approve its cache jobs,
   review the build results, then merge manually. Richer reports are planned. Merging starts a build
   of the final =main= commit.
@@ -13,8 +14,15 @@
   uploaded to Cachix.
 
 * Current Implementation
-[[file:workflows/build.yml][Build and cache]] runs on PRs targeting =main=, pushes to =main=, and manual dispatches.
-Ordinary branch pushes do not trigger it. Fork PRs and manual runs on other branches are skipped.
+[[file:workflows/update.yml][Prepare configuration]] owns main-branch pushes, schedules, and manual dispatches. On pushes it
+checks the exact pushed snapshot without running =nix flake update=. If no hash correction is
+needed, it calls [[file:workflows/build.yml][Build and cache]] as a reusable workflow for that same commit. If a correction is
+needed, it creates/updates =automation/caddy-hash= and skips building the uncorrected main snapshot.
+The repair PR triggers the normal PR build, subject to approval; merging remains manual.
+
+The build workflow also handles PRs targeting =main= directly. It does not independently listen to
+main pushes, so preparation and builds cannot race. Ordinary branch pushes, fork PRs, and manual
+runs on other branches are skipped. There are still only two workflow files.
 
 | Runner       | Platform       | System outputs |
 |--------------+----------------+----------------|
@@ -82,7 +90,8 @@ obtain them without the corresponding Environment gate. Do not use =pull_request
 candidate code with write credentials.
 
 4. Commit and push the workflow when ready. Once it is on =main=, it can also be run through
-   Actions -> Build and cache -> Run workflow, selecting =main=.
+   Actions -> Prepare configuration -> Run workflow, selecting =main= and mode =check= to test the
+   current lock without upgrading, or mode =update= to prepare dependency updates.
 5. Check both platforms' build, final upload, and Cachix post-job steps. Fix failures and rerun the
    failed jobs as needed. No activation or deployment is performed by this workflow.
 
@@ -91,20 +100,26 @@ substitution policy is unchanged. No production SOPS keys are needed. Only the c
 and its lock file are built; local uncommitted or untracked files are not sent to the runner.
 
 * Dependency Update PRs
-[[file:workflows/update.yml][Update flake inputs]] runs weekly on Sunday at 03:00 UTC (11:00 Asia/Shanghai), or manually on
-=main=. Scheduled jobs can be delayed by GitHub. The updater computes/verifies hws's Caddy plugin
-source hash, but does not build complete systems and needs no Cachix write credentials.
+[[file:workflows/update.yml][Prepare configuration]] updates inputs weekly on Sunday at 03:00 UTC (11:00 Asia/Shanghai), or
+manually on =main= in mode =update= (the manual default). Pushes and mode =check= never upgrade the
+lock. Scheduled jobs can be delayed by GitHub. Preparation needs no Cachix write credentials; the
+separate build jobs obtain those through their protected Environments.
 
-The workflow calls [[file:scripts/update-inputs.py][update-inputs.py]] once. The script records the Caddy recipe, updates the lock,
-then compares and conditionally refreshes/verifies Caddy. There are no subcommands or state files.
-Report formatting remains a separate step.
+The workflow calls [[file:scripts/update-inputs.py][update-inputs.py]] once. In update mode it records the recipe, updates the lock,
+then compares and conditionally refreshes/verifies Caddy. On a push it compares against the previous
+pushed commit, if available. Without a baseline (first push, rewritten history, or manual check),
+it refreshes conservatively with =nix-update=. An unchanged push baseline is skipped only when its
+Linux cache check succeeded; otherwise the hash is checked so a pre-existing failure is not ignored.
+Reporting remains a separate step. The PR action's existing output decides what happens
+next: a repair PR triggers candidate builds; no repair PR allows building the original snapshot.
 
 - Empty =inputs=: update all inputs.
 - Space-separated input names, e.g. =llm-agents= or =hjem darwin=: request updates to those inputs.
   Input handling is delegated to Nix. Indirect lock changes can still occur
   when an input's dependencies change or its references need reconciliation.
-- Changed locks and/or Caddy hashes create or update a single PR from =automation/flake-update= to
-  =main=. No difference means no new update PR is needed. =create-pull-request= manages the branch
+- Dependency changes create or update =automation/flake-update=; push/check hash repairs use the
+  separate =automation/caddy-hash= branch so a repair does not replace a pending dependency update.
+  No difference means no new PR is needed. =create-pull-request= manages the branch
   lifecycle and only stages =flake.lock= and =hosts/hws/default.nix=. Nix commits lock changes in
   the temporary runner checkout; the action includes that commit and any hash correction in the PR.
 - Each run starts from the latest =main=; it does not accumulate pending updates from an earlier
@@ -122,8 +137,10 @@ After committing and pushing both workflows, a manual update can be requested wi
 gh workflow run update.yml --repo hejsu/flakes --ref main
 # Or update only llm-agents:
 gh workflow run update.yml --repo hejsu/flakes --ref main -f inputs=llm-agents
-# To also repair an already stale Caddy hash:
-gh workflow run update.yml --repo hejsu/flakes --ref main -f inputs=llm-agents -f refresh-caddy=true
+# Check/repair current main without upgrading any input:
+gh workflow run update.yml --repo hejsu/flakes --ref main -f mode=check
+# Recompute Caddy's hash even if its declared inputs are unchanged:
+gh workflow run update.yml --repo hejsu/flakes --ref main -f mode=check -f refresh-caddy=true
 #+end_src
 
 Review and approve the resulting PR's =nix-cache-pr= jobs, then merge manually after reviewing the
@@ -135,13 +152,18 @@ The update script keeps the original recipe in memory and, only when needed, inv
 followed by source verification. It does not implement hash discovery, parse build errors, or edit
 Nix files itself.
 
-First compare hws's Caddy source =drvPath= before/after updating the lock. This only evaluates the
+Compare hws's Caddy source =drvPath= against the baseline described above. This only evaluates the
 derivation: it does not build or fetch the plugin dependencies. If the path is unchanged, skip
 prefetching and verification. A changed derivation means its hash needs checking, not necessarily
 that the hash will change. This detects changes to Go/build inputs too, unlike a version-only check.
 Use the manual =refresh-caddy= input to bypass the skip when repairing an already stale hash or
 rechecking external dependency drift that is not represented in the derivation. Evaluation errors
 stop the update rather than being treated as "unchanged".
+
+The cheap comparison detects changes, not arbitrary external dependency drift. A failed or missing
+Linux check triggers a conservative hash refresh, without downloading old CI logs. Manual mode
+=check= or the force option can also recheck the current hash. An unchanged recipe does not prove
+the entire system is valid; complete builds still follow preparation.
 
 When needed, use [[https://github.com/Mic92/nix-update][nix-update]] from the locked Nixpkgs input, not a custom hash-parsing script.
 =--version=skip --src-only= refreshes only the source hash of hws's configured Caddy package.
@@ -160,9 +182,11 @@ nix run --no-update-lock-file --inputs-from . nixpkgs#nix-update -- \
   nixosConfigurations.hws.config.services.caddy.package
 #+end_src
 
-Direct pushes to =main= are not rewritten by CI. If a local dependency update invalidates the hash,
-run the command with a Linux builder before pushing, or use the update workflow to prepare a repair
-PR. A Mac without a Linux builder cannot compute this Linux-specific source output locally.
+Direct pushes to =main= are never rewritten. Preflight either passes the exact commit to the build
+workflow, or publishes the hash fix as a PR and leaves main builds skipped until a corrected commit
+is merged. A successful preparation alone is not a successful system build: check the called build
+jobs or repair PR before upgrading. No automatic merge or deployment is enabled. A Mac without a
+Linux builder cannot compute this Linux-specific source output locally.
 
 ** Future Report Layer
 Keep reporting separate from updating and caching. After both platform jobs finish, a separately
