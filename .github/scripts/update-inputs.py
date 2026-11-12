@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Prepare dependency updates, or check a pushed snapshot without changing its lock."""
 
+import json
 import os
 
 from pathlib import Path
@@ -48,6 +49,15 @@ if before == after and os.getenv("CHECK_ONLY") == "true":
     if passed != "true":
         before = None
 if before != after or os.getenv("FORCE_CADDY") == "true":
+    # Nix 2.35 copies flake sources to the store lazily, so the store path
+    # reported by `nix flake metadata` (which nix-update relies on to obtain
+    # flakeImportPath) can be one that was never materialised. Archive the
+    # flake first so that path exists by the time nix-update getFlake's it.
+    archived = json.loads(nix(
+        "flake", "archive", "--json", "--no-write-lock-file", ".", capture=True,
+    ))
+    print(f"Materialised flake source at {archived.get('path')}", flush=True)
+
     print("Refreshing Caddy hash with nix-update.", flush=True)
     nix(
         "run", "--no-update-lock-file", "--inputs-from", ".", "nixpkgs#nix-update", "--",
