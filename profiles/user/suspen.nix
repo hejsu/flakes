@@ -7,17 +7,11 @@ in
   user = {
     name = "suspen";
 
-    # Bootstraps the account on Linux; harmless on Darwin (ignored). A host can
-    # still override it since this is only a default.
     initialHashedPassword = lib.mkDefault "$6$8fKq2Zr9PmLxWvTy$o6W7AAu2IewTITRyufOT8R6i4WqeQxJLs.PZFUEHagBuOdxlAPhktx0OsLj.splluOmMsMmim0cGNjHrabxOW.";
   };
-
-  home.impure.enable = true;
 
   user.shell = pkgs.fish;
 
   user.openssh.authorizedKeys.keys = [ mainKey ];
   users.users.root.openssh.authorizedKeys.keys = [ mainKey ];
 }
-
-

@@ -31,6 +31,10 @@
         MACAddress = "00:15:5d:02:65:06";
         Address = "192.168.10.2";
       }
+      {
+        MACAddress = "00:15:5d:02:65:09";
+        Address = "192.168.10.10";
+      }
     ];
   };
 
@@ -43,6 +47,9 @@
     externalInterface = "eth0";
     internalIPs = [ "192.168.10.0/24" ];
   };
+
+  # Hyper-V Internal LAN contains our own Windows host and VMs.
+  networking.firewall.trustedInterfaces = [ "lan0" ];
 
   networking.firewall.interfaces.lan0 = {
     allowedTCPPorts = [ 53 ];

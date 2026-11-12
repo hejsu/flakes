@@ -90,10 +90,18 @@ let
     # Forces every host's toplevel drvPath: catches assertions, type errors and
     # unbound variables across the real configurations without building them.
     testEveryHostEvaluates = {
-      expr = lib.mapAttrs
-        (_: c: builtins.isString c.config.system.build.toplevel.drvPath)
-        flake.nixosConfigurations;
-      expected = lib.mapAttrs (_: _: true) flake.nixosConfigurations;
+      expr = {
+        nixos = lib.mapAttrs
+          (_: c: builtins.isString c.config.system.build.toplevel.drvPath)
+          flake.nixosConfigurations;
+        darwin = lib.mapAttrs
+          (_: c: builtins.isString c.config.system.build.toplevel.drvPath)
+          flake.darwinConfigurations;
+      };
+      expected = {
+        nixos = lib.mapAttrs (_: _: true) flake.nixosConfigurations;
+        darwin = lib.mapAttrs (_: _: true) flake.darwinConfigurations;
+      };
     };
   };
 

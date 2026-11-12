@@ -2,6 +2,7 @@
 """Prepare dependency updates, or check a pushed snapshot without changing its lock."""
 
 import os
+
 from pathlib import Path
 import subprocess
 

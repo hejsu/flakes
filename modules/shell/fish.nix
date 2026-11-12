@@ -96,16 +96,7 @@ let cfg = config.modules.shell.fish; in {
       fzf
       yazi
       ripgrep
-      tree
-      less
-      htop
-      unzip
-      bat
-      tlrc
       wget
-      curl
-      tokei
-      fastfetch
       nh
       jq
     ];

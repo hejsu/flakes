@@ -18,10 +18,7 @@
     sops.enable = true;
 
     shell = {
-      direnv.enable = true;
-      git.enable = true;
       fish.enable = true;
-      nvim.enable = true;
       comma.enable = true;
     };
 
@@ -48,18 +45,16 @@
   };
 
   settings = { ... }: {
-    programs.nix-ld.enable = true;
-
     ## Magpie Podman Auto Update
     systemd.timers.podman-auto-update = {
       wantedBy = [ "timers.target" ];
-      timerConfig = {
-        OnCalendar = [ "" "*-*-* 03:00:00" ];
-      };
+      timerConfig.OnCalendar = [ "" "*-*-* 03:00:00" ];
     };
     virtualisation.oci-containers.containers = {
       magpie.labels."io.containers.autoupdate" = "registry";
     };
+
+    # networking.getaddrinfo.precedence."::ffff:0:0/96" = 100;
 
     systemd.network.networks."10-eth0" = {
       matchConfig.Name = "eth0";
@@ -81,8 +76,6 @@
         RouterAllowList = [ "fe80::7625:8aff:fe00:f1ab" ];
       };
     };
-
-    networking.getaddrinfo.precedence."::ffff:0:0/96" = 100;
 
     system.stateVersion = "26.11";
   };

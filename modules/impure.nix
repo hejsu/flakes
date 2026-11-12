@@ -104,7 +104,9 @@ let
 in
 {
   options.home.impure = {
-    enable = lib.mkEnableOption "impure home symlinks redirection";
+    enable = lib.mkEnableOption "impure home symlinks redirection" // {
+      default = true;
+    };
 
     sourceDir = lib.mkOption {
       type = types.nullOr (types.either types.path types.str);
@@ -145,4 +147,3 @@ in
     hjem.users.${config.user.name}.xdg.state.files."HJEM_IMPURE_ACTIVE".text = "0";
   };
 }
-
