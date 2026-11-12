@@ -9,7 +9,7 @@
     enable = true;
     name = "syd";
     version = null;
-    imageSize = "10G";
+    imageSize = "20G";
     compression.enable = false;
 
     partitions = {

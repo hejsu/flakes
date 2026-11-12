@@ -8,16 +8,18 @@
   };
 
   modules = {
+    networking.ssh.enable = true;
+
     shell = {
       fish.enable = true;
+      nvim.enable = true;
+      comma.enable = true;
+      direnv.enable = true;
       git.enable = true;
     };
-
-    networking.ssh.enable = true;
   };
 
   settings = {
-    services.resolved.enable = true;
     system.stateVersion = "26.11";
   };
 

@@ -75,6 +75,7 @@
   networking.firewall = {
     trustedInterfaces = [ "tun0" ];
     allowedTCPPorts = [ 38443 ];
+    interfaces.tailscale0.allowedTCPPorts = [ 9091 ];
   };
 
   # sing-box manages TUN routing; the Tailnet profile selects loose firewall RPF.

@@ -8,15 +8,15 @@
   };
 
   modules = { config } : {
+    sops = {
+      enable = true;
+      ageKeyFile = "/var/db/age/keys.txt";
+    };
+
     apps = {
       emacs.enable = true;
       kitty.enable = true;
       zed.enable = true;
-    };
-
-    sops = {
-      enable = true;
-      ageKeyFile = "/var/db/age/keys.txt";
     };
 
     shell = {

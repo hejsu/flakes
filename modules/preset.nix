@@ -12,6 +12,7 @@
   };
 
   networking = {
+    nftables.enable = true;
     useDHCP = false;
     useNetworkd = true;
   };

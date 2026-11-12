@@ -1,6 +1,8 @@
 {
   system = "x86_64-linux";
 
+  includes = [ ./ss-gateway.nix ];
+
   profiles = {
     user = "suspen";
     role = "server";
