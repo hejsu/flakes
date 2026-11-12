@@ -6,12 +6,12 @@
     ../security.nix
     ../networking/ssh.nix
     ../networking/singbox.nix
+    ../services/cliproxyapi.nix
     ../services/magpie.nix
   ];
 
   imports = [
     ./apps
-    ./cliproxyapi.nix
     ./parity.nix
     ./sops.nix
     ./user.nix

@@ -19,7 +19,9 @@ buildGoModule rec {
 
   proxyVendor = true;
   vendorHash = "sha256-yYe02N6TEJ0FWjyLmBRO92YMGnZ/FkASrV2obOdtOBw=";
-  env.GOPROXY = "https://goproxy.cn,direct";
+  overrideModAttrs = _: {
+    env.GOPROXY = "https://goproxy.cn|https://proxy.golang.org,direct";
+  };
 
   ldflags = [ "-s" "-w" ];
 
