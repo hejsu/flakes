@@ -68,20 +68,11 @@ jobs:
           GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
         run: python3 .github/scripts/update-inputs.py
 
-      - name: Prepare PR description
+      - name: Prepare PR description and package diff
         env:
           BASE_COMMIT: ${{ steps.checkout.outputs.commit }}
-        run: |
-          {
-            echo '```text'
-            git log --format=%b "$BASE_COMMIT..HEAD"
-            echo '```'
-            echo '```diff'
-            git diff -- hosts/hws/default.nix
-            echo '```'
-            echo '<!-- update-report:start -->'
-            echo '<!-- update-report:end -->'
-          } > "$RUNNER_TEMP/update-pr.md"
+          OUTPUT: ${{ runner.temp }}/update-pr.md
+        run: python3 .github/scripts/update-report.py
 
       - name: Create or update pull request
         id: pr
