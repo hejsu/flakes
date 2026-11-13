@@ -1,0 +1,41 @@
+diff --git a/config/endpoint/result.go b/config/endpoint/result.go
+--- a/config/endpoint/result.go
++++ b/config/endpoint/result.go
+@@ -19,0 +20,3 @@
++
++	// RootURL is the HTTP(S) origin used to open the service.
++	RootURL string `json:"rootURL,omitempty"`
+diff --git a/config/endpoint/endpoint.go b/config/endpoint/endpoint.go
+--- a/config/endpoint/endpoint.go
++++ b/config/endpoint/endpoint.go
+@@ -314,0 +315,11 @@
++
++			if (urlObject.Scheme == "http" || urlObject.Scheme == "https") &&
++				!processedEndpoint.UIConfig.HideURL &&
++				!processedEndpoint.UIConfig.HideHostname &&
++				!processedEndpoint.UIConfig.HidePort {
++				result.RootURL = (&url.URL{
++					Scheme: urlObject.Scheme,
++					Host:   urlObject.Host,
++					Path:   "/",
++				}).String()
++			}
+diff --git a/web/app/src/components/EndpointCard.vue b/web/app/src/components/EndpointCard.vue
+--- a/web/app/src/components/EndpointCard.vue
++++ b/web/app/src/components/EndpointCard.vue
+@@ -21 +21,14 @@
+-            <span v-if="hostname" class="truncate" :title="hostname">{{ hostname }}</span>
++            <a
++              v-if="hostname && latestResult?.rootURL"
++              :href="latestResult.rootURL"
++              class="truncate hover:underline"
++              :title="latestResult.rootURL"
++              target="_blank"
++              rel="noopener noreferrer"
++              @click.stop
++            >
++              {{ hostname }}
++            </a>
++            <span v-else-if="hostname" class="truncate" :title="hostname">
++              {{ hostname }}
++            </span>

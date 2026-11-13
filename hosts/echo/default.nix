@@ -38,8 +38,6 @@
         enable = true;
         ingress.tailnet.magpie.endpoints.
           "tcp:80" = "tcp://127.0.0.1:3430";
-        ingress.tailnet.magpie-api.endpoints.
-          "tcp:80" = "tcp://127.0.0.1:3425";
       };
     };
   };

@@ -86,53 +86,53 @@
   #   "net.ipv4.conf.default.rp_filter" = 2;
   # };
 
-  systemd.services.singbox-publish =
-    let
-      gateway = lib.findFirst
-        (inbound: (inbound.tag or "") == "gw-ss")
-        (throw "singbox-publish: gw-ss inbound not found")
-        config.services.sing-box.settings.inbounds;
-
-      server = lib.head config.services.cloudflare-ddns.ip6Domains;
-
-      exportUser = user:
-        assert builtins.match "[A-Za-z0-9_-]+" user.name != null;
-        ''
-          server_key=$(<${lib.escapeShellArg gateway.password._secret})
-          user_key=$(<${lib.escapeShellArg user.password._secret})
-
-          password=$(printf '%s:%s' "$server_key" "$user_key" | jq -sRr @uri)
-          name=$(printf '%s' ${lib.escapeShellArg user.name} | jq -sRr @uri)
-
-          printf 'ss://%s:%s@%s:%s#%s\n' \
-            ${lib.escapeShellArg gateway.method} \
-            "$password" \
-            ${lib.escapeShellArg server} \
-            ${lib.escapeShellArg (toString gateway.listen_port)} \
-            "$name" \
-            > "$RUNTIME_DIRECTORY"/${lib.escapeShellArg "${user.name}.txt"}
-        '';
-    in {
-      description = "Prepare per-user Shadowsocks subscription files";
-
-      serviceConfig = {
-        Type = "oneshot";
-        StateDirectory = "singbox-publish";
-        StateDirectoryMode = "0700";
-        RuntimeDirectory = "singbox-publish";
-        RuntimeDirectoryMode = "0700";
-        UMask = "0077";
-      };
-
-      path = [ pkgs.jq pkgs.openssh ];
-
-      script = ''
-        set -euo pipefail
-
-        # Provision the publishing identity manually; never replace it here.
-        ssh-keygen -y -P "" -f "$STATE_DIRECTORY/id_ed25519" > /dev/null
-
-        ${lib.concatMapStringsSep "\n" exportUser gateway.users}
-      '';
-    };
+#   systemd.services.singbox-publish =
+#     let
+#       gateway = lib.findFirst
+#         (inbound: (inbound.tag or "") == "gw-ss")
+#         (throw "singbox-publish: gw-ss inbound not found")
+#         config.services.sing-box.settings.inbounds;
+#
+#       server = lib.head config.services.cloudflare-ddns.ip6Domains;
+#
+#       exportUser = user:
+#         assert builtins.match "[A-Za-z0-9_-]+" user.name != null;
+#         ''
+#           server_key=$(<${lib.escapeShellArg gateway.password._secret})
+#           user_key=$(<${lib.escapeShellArg user.password._secret})
+#
+#           password=$(printf '%s:%s' "$server_key" "$user_key" | jq -sRr @uri)
+#           name=$(printf '%s' ${lib.escapeShellArg user.name} | jq -sRr @uri)
+#
+#           printf 'ss://%s:%s@%s:%s#%s\n' \
+#             ${lib.escapeShellArg gateway.method} \
+#             "$password" \
+#             ${lib.escapeShellArg server} \
+#             ${lib.escapeShellArg (toString gateway.listen_port)} \
+#             "$name" \
+#             > "$RUNTIME_DIRECTORY"/${lib.escapeShellArg "${user.name}.txt"}
+#         '';
+#     in {
+#       description = "Prepare per-user Shadowsocks subscription files";
+#
+#       serviceConfig = {
+#         Type = "oneshot";
+#         StateDirectory = "singbox-publish";
+#         StateDirectoryMode = "0700";
+#         RuntimeDirectory = "singbox-publish";
+#         RuntimeDirectoryMode = "0700";
+#         UMask = "0077";
+#       };
+#
+#       path = [ pkgs.jq pkgs.openssh ];
+#
+#       script = ''
+#         set -euo pipefail
+#
+#         # Provision the publishing identity manually; never replace it here.
+#         ssh-keygen -y -P "" -f "$STATE_DIRECTORY/id_ed25519" > /dev/null
+#
+#         ${lib.concatMapStringsSep "\n" exportUser gateway.users}
+#       '';
+#     };
 }

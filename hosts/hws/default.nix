@@ -1,7 +1,7 @@
 {
   system = "x86_64-linux";
 
-  includes = [ ./ss-gateway.nix ];
+  includes = [ ./ss-gateway.nix ./gatus.nix ];
 
   profiles = {
     user = "suspen";
