@@ -11,6 +11,14 @@
   "use_display_p3": true,
   "accessible_mode": true,
   "agent_servers": {
+    "antigravity-acp": {
+      "default_config_options": {
+        "mode": "yolo",
+        "thinking_level": "xhigh",
+        "model": "gemini-4-carbon"
+      },
+      "type": "registry"
+    },
     "opencode-v2": {
       "default_config_options": {
         "mode": "build",

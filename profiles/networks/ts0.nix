@@ -7,6 +7,7 @@
 
     extraSetFlags = [
       "--accept-dns=true"
+      "--accept-routes=true"
       "--operator=${config.user.name}"
     ];
   };

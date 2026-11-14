@@ -20,3 +20,6 @@ nix-eval.json
 
 # WorkBuddy AI workspace data (agent memory / logs)
 .workbuddy-ai/
+
+# Antigravity CLI materialised workspace skills
+skills/
