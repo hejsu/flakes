@@ -1,9 +1,9 @@
 { lib, ... }: {
   services.tailscale = {
-    # Route the LAN while retaining loose RPF for sing-box's policy routing.
     useRoutingFeatures = lib.mkForce "both";
-    # 4via6 site 1 maps the LAN without conflicting with clients' local subnets.
-    extraSetFlags = [ "--advertise-routes=fd7a:115c:a1e0:b1a:0:1:c0a8:a00/120" ];
+    extraSetFlags = [
+      "--advertise-routes=fd7a:115c:a1e0:b1a:0:1:c0a8:a00/120"
+    ];
   };
 
   systemd.network.links."10-lan0" = {
@@ -45,9 +45,7 @@
     ];
   };
 
-  services.resolved.settings = {
-    Resolve.DNSStubListenerExtra = "192.168.10.1";
-  };
+  services.resolved.settings.Resolve.DNSStubListenerExtra = "192.168.10.1";
 
   networking.nat = {
     enable = true;
@@ -55,9 +53,7 @@
     internalIPs = [ "192.168.10.0/24" ];
   };
 
-  # LAN-initiated Tailnet connections use echo's identity. This also lets
-  # TailVIP Services hosted on echo reply through the host's conntrack/NAT.
-  # Tailscale's built-in subnet SNAT handles the opposite direction.
+  # LAN-initiated Tailnet connections use echo's identity.
   networking.nftables.tables.echo-lan-tailnet-snat = {
     family = "ip";
     content = ''

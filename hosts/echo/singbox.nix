@@ -40,6 +40,12 @@
     ];
 
     route.rules = [
+      # Bypass Tailscale's underlay before the subscription's sniff/proxy rules.
+      {
+        inbound = [ "tun-in" ];
+        process_name = [ "tailscaled" ".tailscaled-wrapped" ];
+        action = "bypass";
+      }
       {
         inbound = [ "gw-ss" ];
         auth_user = [ "user0" ];
