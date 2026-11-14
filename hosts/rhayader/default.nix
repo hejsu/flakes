@@ -8,10 +8,7 @@
   };
 
   modules = { config } : {
-    sops = {
-      enable = true;
-      ageKeyFile = "/var/db/age/keys.txt";
-    };
+    sops.enable = true;
 
     apps = {
       emacs.enable = true;

@@ -12,7 +12,7 @@ let cfg = config.modules.sops; in {
       description = ''
         Path to the age private key file.
         Defaults to the system-wide key used by sops-nix on Linux; Darwin
-        overrides it with the user-owned key. Set to null to rely solely on
+        overrides it with the root-owned machine key. Set to null to rely solely on
         SSH-derived identities (sops-nix defaults to the host ed25519 key).
       '';
     };
@@ -33,6 +33,7 @@ let cfg = config.modules.sops; in {
 
       age = {
         keyFile = cfg.ageKeyFile;
+        generateKey = false;
         sshKeyPaths = [ ];
       };
       gnupg.sshKeyPaths = [ ];

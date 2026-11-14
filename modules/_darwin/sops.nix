@@ -24,7 +24,7 @@ in
     };
   };
 
-  # Linux uses the system-wide key; macOS keeps the user-owned one.
-  config.modules.sops.ageKeyFile =
-    lib.mkDefault "${config.home.configDir}/sops/age/keys.txt";
+  # Linux uses the system-wide key; macOS uses the root-owned machine key
+  # provisioned before enrollment (root:wheel 0600 inside a 0700 directory).
+  config.modules.sops.ageKeyFile = lib.mkDefault "/var/db/age/keys.txt";
 }

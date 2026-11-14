@@ -59,6 +59,7 @@ complete -c ss -n __fish_use_subcommand -a generations  -d "Alias for gens"
 complete -c ss -n __fish_use_subcommand -a repl         -d "Open a nix repl"
 complete -c ss -n __fish_use_subcommand -a path         -d "Print a path inside the repo"
 complete -c ss -n __fish_use_subcommand -a deploy       -d "Push this checkout to host(s) and rebuild"
+complete -c ss -n __fish_use_subcommand -a enroll       -d "Provision the sops age machine key on a host"
 complete -c ss -n __fish_use_subcommand -a help         -d "Show usage help"
 
 # A bare host name means `ss deploy <host>`.
@@ -90,5 +91,8 @@ complete -c ss -n "__fish_seen_subcommand_from path" -a "(__ss_areas)" -d Area
 # deploy, and the bare-host form.
 complete -c ss -n "__fish_seen_subcommand_from deploy" -a "(__ss_hosts)" -d Host
 
+# enroll (same host list).
+complete -c ss -n "__fish_seen_subcommand_from enroll" -a "(__ss_hosts)" -d Host
+
 # help
-complete -c ss -n "__fish_seen_subcommand_from help" -a "sync swap unswap gc pull gens repl path deploy" -d Verb
+complete -c ss -n "__fish_seen_subcommand_from help" -a "sync swap unswap gc pull gens repl path deploy enroll" -d Verb
