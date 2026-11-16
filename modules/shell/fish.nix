@@ -35,6 +35,10 @@ let cfg = config.modules.shell.fish; in {
 
     home.sessionVariables = {
       NH_FLAKE = config.home.flakeDir;
+      SS_BIN = "${self.packages.ss}/bin/ss";
+      SS_HOST = config.networking.hostName;
+      SS_HOSTS = lib.concatStringsSep " " (lib.attrNames (self.nixosConfigurations // self.darwinConfigurations));
+      SS_INPUTS = lib.concatStringsSep " " (lib.filter (n: n != "self") (lib.attrNames self.inputs));
     };
 
     programs.fish.enable = true;

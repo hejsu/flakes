@@ -1,0 +1,6 @@
+(lang dune 3.0)
+(name ss)
+
+(package
+ (name ss)
+ (synopsis "Dotfiles management helper"))

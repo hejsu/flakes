@@ -1,0 +1,10 @@
+(test
+ (name test_enroll)
+ (modules test_enroll)
+ (libraries ss_lib alcotest unix))
+
+(test
+ (name test_cli)
+ (modules test_cli)
+ (deps ../src/main.exe)
+ (libraries ss_lib alcotest unix))

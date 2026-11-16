@@ -1,0 +1,10 @@
+(library
+ (name ss_lib)
+ (modules sh env impure sync deploy enroll gc path)
+ (libraries unix))
+
+(executable
+ (name main)
+ (public_name ss)
+ (modules main)
+ (libraries ss_lib cmdliner))
