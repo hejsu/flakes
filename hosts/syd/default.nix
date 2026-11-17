@@ -10,6 +10,8 @@
   };
 
   modules = {
+    sops.enable = true;
+
     services.openssh.enable = true;
 
     shell = {

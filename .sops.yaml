@@ -26,3 +26,8 @@ creation_rules:
     - age:
       - *rhayader
       - *se
+  - path_regex: hosts/syd/assets/.*
+    key_groups:
+    - age:
+      - *syd
+      - *se
