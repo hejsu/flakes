@@ -24,7 +24,7 @@ let resolve ~repo ?(area = Repo) rest =
     match area with
     | Repo -> repo
     | Subdir sub -> repo ^ "/" ^ sub
-    | Host -> repo ^ "/hosts/" ^ Env.current_host ()
+    | Host -> repo ^ "/hosts/" ^ Env.host
     | Profile -> "/nix/var/nix/profiles/system"
   in
   String.concat "/" (base :: rest)

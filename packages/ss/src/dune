@@ -1,7 +1,11 @@
+(rule
+ (with-stdout-to host_os.ml
+  (echo "let system = \"%{ocaml-config:system}\"\n")))
+
 (library
  (name ss_lib)
- (modules sh env impure sync deploy enroll gc path)
- (libraries unix))
+ (modules host_os sh os env impure sync deploy enroll gc path)
+ (libraries unix yojson spawn))
 
 (executable
  (name main)

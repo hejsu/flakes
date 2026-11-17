@@ -1,5 +1,5 @@
 { config, lib, pkgs, ... }: {
-  modules.networking.singbox.subscription.enable = true;
+  modules.services.sing-box.subscription.enable = true;
 
   sops.secrets = {
     "singbox-ss-server-key".restartUnits = [ "sing-box.service" ];

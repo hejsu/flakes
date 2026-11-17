@@ -1,5 +1,5 @@
 { config, ... }: {
-  modules.networking.singbox.enable = true;
+  modules.services.sing-box.enable = true;
 
   # Provision these values in assets/secrets.yaml before deploying.
   sops.secrets = {

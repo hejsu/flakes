@@ -1,4 +1,14 @@
 (test
+ (name test_sh)
+ (modules test_sh)
+ (libraries ss_lib alcotest unix))
+
+(test
+ (name test_os)
+ (modules test_os)
+ (libraries ss_lib alcotest unix))
+
+(test
  (name test_enroll)
  (modules test_enroll)
  (libraries ss_lib alcotest unix))

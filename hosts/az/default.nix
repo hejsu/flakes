@@ -14,10 +14,11 @@
 
     shell = {
       fish.enable = true;
+      comma.enable = true;
     };
 
-    networking = {
-      ssh.enable = true;
+    services = {
+      openssh.enable = true;
     };
   };
 

@@ -1,7 +1,11 @@
 {
   system = "x86_64-linux";
 
-  includes = [ ./ss-gateway.nix ./gatus.nix ];
+  includes = [
+    ./derp.nix
+    ./gatus.nix
+    ./ss-gateway.nix
+  ];
 
   profiles = {
     user = "suspen";
@@ -14,17 +18,17 @@
 
     shell = {
       fish.enable = true;
-      git.enable = true;
+      comma.enable = true;
     };
 
-    networking = {
-      ssh.enable = true;
+    services = {
+      caddy.enable = true;
+      openssh.enable = true;
     };
   };
 
   ## Local config
-  settings = { lib, pkgs, config, ... }: {
-
+  settings = { ... }: {
     systemd.network.networks."99-wired" = {
       networkConfig.DNS = [
         "223.5.5.5"
@@ -33,49 +37,10 @@
       dhcpV4Config.UseDNS = false;
     };
 
-    sops.secrets."cloudflare-api-token-dns-edit-zone-read" = { };
-    sops.templates."caddy-cloudflare-env" = {
-      restartUnits = [ "caddy.service" ];
-      owner = "caddy";
-      group = "caddy";
-      content = ''
-        CF_API_TOKEN="${config.sops.placeholder."cloudflare-api-token-dns-edit-zone-read"}"
-      '';
-    };
-
     nix.settings = {
       experimental-features = [ "configurable-impure-env" ];
       impure-env = "GOPROXY=https://goproxy.cn,direct";
     };
-
-    services.caddy = {
-      enable = true;
-      email = "suspen@outlook.sk";
-      environmentFile = config.sops.templates."caddy-cloudflare-env".path;
-      package = pkgs.caddy.withPlugins {
-        plugins = [ "github.com/caddy-dns/cloudflare@v0.2.4" ];
-        hash = "sha256-QSiwKqKvSxhksWBF4/MlBOpyXba5xOQ2sRwA0R7399E=";
-      };
-    };
-
-    services.caddy.virtualHosts."https://derp.aoran.eu.org:33443".extraConfig = ''
-      tls {
-        dns cloudflare {env.CF_API_TOKEN}
-      }
-      reverse_proxy 127.0.0.1:8081
-    '';
-
-    services.tailscale.derper = {
-      enable = true;
-      domain = "derp.aoran.eu.org";
-      configureNginx = false;
-      port = 8081;
-      stunPort = 3478;
-      openFirewall = true;
-      verifyClients = true;
-    };
-
-    networking.firewall.allowedTCPPorts = [ 33443 ];
 
     system.stateVersion = "26.05";
   };

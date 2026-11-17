@@ -2,9 +2,32 @@ open Cmdliner
 open Cmdliner.Term.Syntax
 open Ss_lib
 
+let guard fn =
+  try Ok (fn ()) with
+  | Env.Error msg -> Error msg
+  | Unix.Unix_error (e, fn, arg) ->
+      Error (Printf.sprintf "%s%s: %s" fn (if arg = "" then "" else " " ^ arg) (Unix.error_message e))
+  | Sys_error msg when String.ends_with ~suffix:"Broken pipe" msg ->
+      exit 141 (* reader went away: quiet, like dying of SIGPIPE *)
+  | Sys_error msg -> Error msg
+  | Sys.Break -> prerr_newline (); exit 130
+
 let unit_cmd name ~doc fn =
-  let info = Cmd.info name ~doc in
-  Cmd.make info (let+ () = Term.const () in fn ())
+  Cmd.make (Cmd.info name ~doc) (let+ () = Term.const () in guard fn)
+
+let pos_int =
+  let parser s =
+    match int_of_string_opt s with
+    | Some n when n >= 1 -> Ok n
+    | _ -> Error (Printf.sprintf "expected integer >= 1, got %S" s)
+  in
+  Arg.Conv.make ~docv:"INT" ~parser ~pp:Format.pp_print_int ()
+
+let host_conv ~repo =
+  Arg.Conv.make ~docv:"HOST" ~parser:(Env.parse_host ~repo) ~pp:Format.pp_print_string ()
+
+let input_conv =
+  Arg.Conv.make ~docv:"INPUT" ~parser:Env.parse_input ~pp:Format.pp_print_string ()
 
 let sync_cmd =
   let info = Cmd.info "sync" ~doc:"Rebuild and activate this host" in
@@ -14,21 +37,21 @@ let sync_cmd =
   let no_nom = Arg.(value & flag & info ["no-nom"] ~doc:"Do not use nix-output-monitor.") in
   Cmd.make info (
     let+ dry and+ ask and+ verbose and+ no_nom in
-    Sync.sync ~dry ~ask ~verbose ~no_nom ()
+    guard (fun () -> Sync.sync ~dry ~ask ~verbose ~no_nom ())
   )
 
 let rollback_cmd =
   let info = Cmd.info "rollback" ~doc:"Roll back to a previous system generation" in
-  let gen = Arg.(value & pos 0 (some int) None & info [] ~docv:"GEN" ~doc:"Target generation number.") in
+  let gen = Arg.(value & pos 0 (some pos_int) None & info [] ~docv:"GEN" ~doc:"Target generation number.") in
   Cmd.make info (
     let+ gen in
-    Sync.rollback ?gen ()
+    guard (fun () -> Sync.rollback ?gen ())
   )
 
 let gc_cmd =
   let info = Cmd.info "gc" ~doc:"Clean profiles and optimise the store" in
   let user = Arg.(value & flag & info ["u"; "user"] ~doc:"Only this user's profiles.") in
-  let keep = Arg.(value & opt int 3 & info ["k"; "keep"] ~docv:"INT" ~doc:"Minimum number of generations to keep.") in
+  let keep = Arg.(value & opt pos_int 3 & info ["k"; "keep"] ~docv:"INT" ~doc:"Minimum number of generations to keep.") in
   let keep_since =
     Arg.(value & opt (some string) None & info ["K"; "keep-since"] ~docv:"DURATION"
            ~doc:"Keep generations and gcroots newer than $(docv) (e.g. 14d).")
@@ -37,19 +60,17 @@ let gc_cmd =
   let ask = Arg.(value & flag & info ["a"; "ask"] ~doc:"Ask for confirmation.") in
   Cmd.make info (
     let+ user and+ keep and+ keep_since and+ dry and+ ask in
-    Gc.gc ~user ~keep ~keep_since ~dry ~ask
+    guard (fun () -> Gc.gc ~user ~keep ~keep_since ~dry ~ask)
   )
 
 let pull ~repo = function
   | `All -> Sh.run ["nix"; "flake"; "update"; "--flake"; repo]
-  | `Inputs ins ->
-      List.iter Env.require_input ins;
-      Sh.run (["nix"; "flake"; "update"; "--flake"; repo] @ ins)
+  | `Inputs ins -> Sh.run (["nix"; "flake"; "update"; "--flake"; repo] @ ins)
 
 let pull_cmd ~repo =
   let info = Cmd.info "pull" ~doc:"Update flake inputs" in
   let all = Arg.(value & flag & info ["a"; "all"] ~doc:"Update all flake inputs.") in
-  let inputs = Arg.(value & pos_all string [] & info [] ~docv:"INPUT" ~doc:"Flake input(s) to update.") in
+  let inputs = Arg.(value & pos_all input_conv [] & info [] ~docv:"INPUT" ~doc:"Flake input(s) to update.") in
   let target =
     Term.ret (
       let+ all and+ inputs in
@@ -62,15 +83,20 @@ let pull_cmd ~repo =
   in
   Cmd.make info (
     let+ target in
-    pull ~repo target
+    guard (fun () -> pull ~repo target)
   )
 
 let gens () =
-  if Env.is_darwin () then Sh.run ["sudo"; "darwin-rebuild"; "--list-generations"]
-  else Sh.run ["nh"; "os"; "info"]
+  match Env.os with
+  | Env.Darwin -> Sh.run ["sudo"; "darwin-rebuild"; "--list-generations"]
+  | Env.Linux -> Sh.run ["nh"; "os"; "info"]
 
-let repl ~repo () =
-  Sh.run ["nix"; "repl"; "--extra-experimental-features"; "flakes repl-flake"; "--impure"; repo]
+(* nh loads this host's system config (config/options/pkgs) from NH_FLAKE,
+   which Env.init_repo exports; -H keeps it in step with SS_HOST. *)
+let repl () =
+  match Env.os with
+  | Env.Darwin -> Sh.run ["nh"; "darwin"; "repl"; "-H"; Env.host]
+  | Env.Linux -> Sh.run ["nh"; "os"; "repl"; "-H"; Env.host]
 
 let path_cmd ~repo =
   let info = Cmd.info "path" ~doc:"Print a path inside the repo" in
@@ -79,46 +105,44 @@ let path_cmd ~repo =
   let rest = Arg.(value & pos_right 0 string [] & info [] ~docv:"SUBPATH" ~doc:"Optional subpath segment(s).") in
   Cmd.make info (
     let+ area and+ rest in
-    print_endline (Path.resolve ~repo ~area rest)
+    guard (fun () -> print_endline (Path.resolve ~repo ~area rest))
   )
 
 let deploy_cmd ~repo =
   let info = Cmd.info "deploy" ~doc:"Rebuild and activate configuration on remote host(s)" in
-  let hosts = Arg.(non_empty & pos_all string [] & info [] ~docv:"HOST" ~doc:"Target host(s).") in
+  let hosts = Arg.(non_empty & pos_all (host_conv ~repo) [] & info [] ~docv:"HOST" ~doc:"Target host(s).") in
   Cmd.make info (
     let+ hosts in
-    Deploy.deploy ~repo hosts
+    guard (fun () -> Deploy.deploy hosts)
   )
 
 let enroll_cmd ~repo =
   let info = Cmd.info "enroll" ~doc:"Provision the sops age machine key on a host" in
-  let host = Arg.(required & pos 0 (some string) None & info [] ~docv:"HOST" ~doc:"Target host.") in
+  let host = Arg.(required & pos 0 (some (host_conv ~repo)) None & info [] ~docv:"HOST" ~doc:"Target host.") in
   Cmd.make info (
     let+ host in
-    Enroll.enroll ~repo host
+    guard (fun () -> Enroll.enroll ~repo host)
   )
 
 let root_cmd ~repo =
   let info = Cmd.info "ss" ~doc:"Dotfiles management helper" in
-  let default = let+ () = Term.const () in Sync.sync () in
+  let default = let+ () = Term.const () in guard Sync.sync in
   Cmd.group info ~default [
     sync_cmd;
     rollback_cmd;
-    unit_cmd "swap" ~doc:"Swap store links for mutable copies" Impure.swap;
+    unit_cmd "swap" ~doc:"Swap store links for mutable copies" (Impure.swap ~repo);
     unit_cmd "unswap" ~doc:"Restore store links (re-runs the hjem agent)" Impure.unswap;
     unit_cmd "gens" ~doc:"List system generations" gens;
     gc_cmd;
     pull_cmd ~repo;
-    unit_cmd "repl" ~doc:"Open a nix repl with the flake preloaded" (repl ~repo);
+    unit_cmd "repl" ~doc:"Open a nix repl with this host's configuration loaded" repl;
     path_cmd ~repo;
     deploy_cmd ~repo;
     enroll_cmd ~repo;
   ]
 
 let () =
-  try
-    let repo = Env.init_repo () in
-    exit (Cmd.eval ~catch:false (root_cmd ~repo))
-  with Failure msg ->
-    Printf.eprintf "ss: %s\n" msg;
-    exit 1
+  (* Ctrl-C raises Break so finalisers, temp cleanup and child reaping run. *)
+  Sys.catch_break true;
+  let repo = Env.init_repo () in
+  exit (Cmd.eval_result (root_cmd ~repo))

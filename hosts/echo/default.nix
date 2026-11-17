@@ -3,8 +3,10 @@
 
   includes = [
     ./backup.nix
+    ./cpa.nix
     ./ddns.nix
     ./lan.nix
+    ./magpie.nix
     ./singbox.nix
   ];
 
@@ -22,34 +24,17 @@
       comma.enable = true;
     };
 
-    networking = {
-      ssh.enable = true;
-      singbox.enable = true;
-    };
-
     services = {
-      cliproxyapi = {
-        enable = true;
-        ingress.tailnet.cpa.endpoints.
-          "tcp:80" = "tcp://127.0.0.1:8315";
-      };
-
-      magpie = {
-        enable = true;
-        ingress.tailnet.magpie.endpoints.
-          "tcp:80" = "tcp://127.0.0.1:3430";
-      };
+      caddy.enable = true;
+      openssh.enable = true;
+      sing-box.enable = true;
     };
   };
 
   settings = { ... }: {
-    ## Magpie Podman Auto Update
     systemd.timers.podman-auto-update = {
       wantedBy = [ "timers.target" ];
       timerConfig.OnCalendar = [ "" "*-*-* 03:00:00" ];
-    };
-    virtualisation.oci-containers.containers = {
-      magpie.labels."io.containers.autoupdate" = "registry";
     };
 
     # networking.getaddrinfo.precedence."::ffff:0:0/96" = 100;

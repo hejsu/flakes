@@ -1,5 +1,4 @@
 let gc ~user ~keep ~keep_since ~dry ~ask =
-  if keep < 1 then failwith "--keep must be >= 1";
   let scope = if user then "user" else "all" in
   let flags =
     ["--optimise"; "--keep"; string_of_int keep]

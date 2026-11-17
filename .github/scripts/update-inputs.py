@@ -62,7 +62,7 @@ if before != after or os.getenv("FORCE_CADDY") == "true":
     nix(
         "run", "--no-update-lock-file", "--inputs-from", ".", "nixpkgs#nix-update", "--",
         "--flake", "--version=skip", "--src-only", "--system", "x86_64-linux",
-        "--override-filename", "hosts/hws/default.nix", PACKAGE,
+        "--override-filename", "modules/services/caddy.nix", PACKAGE,
     )
     nix("build", "-L", "--no-link", "--no-update-lock-file", SOURCE)
 else:

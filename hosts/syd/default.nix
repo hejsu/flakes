@@ -8,7 +8,7 @@
   };
 
   modules = {
-    networking.ssh.enable = true;
+    services.openssh.enable = true;
 
     shell = {
       fish.enable = true;

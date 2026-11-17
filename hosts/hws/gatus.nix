@@ -1,5 +1,5 @@
 { ... }: {
-  modules.ingress.tailnet.status.endpoints."tcp:80" =
+  services.tailscale.serve.services.status.endpoints."tcp:80" =
     "tcp://127.0.0.1:8080";
 
   services.gatus = {

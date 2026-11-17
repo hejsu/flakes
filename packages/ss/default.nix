@@ -19,7 +19,7 @@ ocamlPackages.buildDunePackage {
       && !(builtins.elem (baseNameOf path) [ "_build" ".direnv" ]);
   };
 
-  buildInputs = [ ocamlPackages.cmdliner ];
+  buildInputs = [ ocamlPackages.cmdliner ocamlPackages.yojson ocamlPackages.spawn ];
   nativeBuildInputs = [ makeWrapper ];
   checkInputs = [ ocamlPackages.alcotest ];
   nativeCheckInputs = [ age git coreutils gnused ];

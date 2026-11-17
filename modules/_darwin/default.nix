@@ -4,10 +4,9 @@
   disabledModules = [
     ../preset.nix
     ../security.nix
-    ../networking/ssh.nix
-    ../networking/singbox.nix
-    ../services/cliproxyapi.nix
-    ../services/magpie.nix
+    ../services/caddy.nix
+    ../services/openssh.nix
+    ../services/sing-box.nix
   ];
 
   imports = [

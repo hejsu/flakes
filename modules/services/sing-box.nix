@@ -2,8 +2,8 @@
 # Host-specific TUN and firewall settings live alongside the host network config.
 { config, lib, pkgs, ... }:
 
-let cfg = config.modules.networking.singbox; in {
-  options.modules.networking.singbox = {
+let cfg = config.modules.services.sing-box; in {
+  options.modules.services.sing-box = {
     enable = lib.mkEnableOption "sing-box";
     subscription.enable = lib.mkEnableOption "sing-box subscription updates";
   };

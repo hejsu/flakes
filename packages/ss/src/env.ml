@@ -1,42 +1,53 @@
+exception Error of string
+
+let fail fmt = Printf.ksprintf (fun s -> raise (Error s)) fmt
+
+type os = Darwin | Linux
+
 let var name =
   match Sys.getenv_opt name with
   | Some v when v <> "" -> Some v
   | _ -> None
 
-let init_repo () =
-  let repo =
-    match var "NH_FLAKE" with
-    | Some p -> p
-    | None -> Filename.concat (Sys.getenv "HOME") ".config/dotfiles"
-  in
-  Unix.putenv "NH_FLAKE" repo;
-  repo
+let os = if Host_os.system = "macosx" then Darwin else Linux
+let home = Sys.getenv "HOME"
+let uid = Unix.getuid ()
 
-let is_darwin () =
-  (Sh.read ["uname"; "-s"] |> String.trim) = "Darwin"
+let user =
+  try (Unix.getpwuid uid).pw_name
+  with Not_found -> Option.value (var "USER") ~default:"unknown"
 
-let current_host () =
+let host =
   match var "SS_HOST" with
   | Some h -> h
-  | None -> Sh.read ["hostname"; "-s"] |> String.trim
+  | None ->
+      let h = Unix.gethostname () in
+      match String.split_first ~sep:"." h with
+      | Some (s, _) -> s
+      | None -> h
+
+let init_repo () =
+  let repo = Option.value (var "NH_FLAKE") ~default:(Filename.concat home ".config/dotfiles") in
+  Unix.putenv "NH_FLAKE" repo;
+  repo
 
 let is_seg s =
   s <> "" && s <> "." && s <> ".." && not (String.contains s '/')
 
-let require_host ~repo name =
+let parse_host ~repo name =
   let ok =
     is_seg name
     && (match var "SS_HOSTS" with
-        | Some hs when List.mem name (String.split_on_char ' ' hs) -> true
-        | _ -> Sys.file_exists (Printf.sprintf "%s/hosts/%s/default.nix" repo name))
+        | Some hs -> List.mem name (String.split_on_char ' ' hs)
+        | None -> Sys.file_exists (Printf.sprintf "%s/hosts/%s/default.nix" repo name))
   in
-  if not ok then failwith (Printf.sprintf "no such host '%s'" name)
+  if ok then Ok name else Error (Printf.sprintf "no such NixOS target host %S" name)
 
-let require_input name =
+let parse_input name =
   let ok =
     is_seg name
     && (match var "SS_INPUTS" with
         | Some ins -> List.mem name (String.split_on_char ' ' ins)
         | None -> true)
   in
-  if not ok then failwith (Printf.sprintf "no such input '%s'" name)
+  if ok then Ok name else Error (Printf.sprintf "no such input %S" name)

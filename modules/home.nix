@@ -22,6 +22,12 @@ let cfg = config.home; in {
     stateDir = mkOption { type = str; default = "${cfg.dir}/.local/state"; };
 
     flakeDir = mkOption { type = str; default = "${cfg.dir}/.config/dotfiles"; };
+
+    impure.enable = mkOption {
+      type = bool;
+      default = true;
+      description = "Allow `ss swap` to replace Hjem store links with mutable local files.";
+    };
   };
 
   config = {
@@ -45,6 +51,12 @@ let cfg = config.home; in {
         xdg = {
           config.files = mkAliasDefinitions options.home.configFile;
           data.files = mkAliasDefinitions options.home.dataFile;
+          state.files."impure.json" = mkIf cfg.impure.enable {
+            text = builtins.toJSON {
+              active = false;
+              sourceDir = "${self.sourceDir}";
+            };
+          };
 
           # Force these, since it'll be considered an abstraction leak to use
           # Hjem's API anywhere outside this module.

@@ -65,7 +65,7 @@ def main():
         "```",
         "",
         "```diff",
-        git("diff", "--", "hosts/hws/default.nix").rstrip(),
+        git("diff", "--", "modules/services/caddy.nix").rstrip(),
         "```",
         "",
         "<!-- update-report:start -->",
