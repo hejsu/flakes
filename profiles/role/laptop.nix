@@ -1,4 +1,6 @@
 { pkgs, config, lib, ... }: {
+  home.impure.enable = true;
+
   # ONLY DARWIN
   assertions = [{
     assertion = pkgs.stdenv.hostPlatform.isDarwin;

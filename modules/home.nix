@@ -23,11 +23,7 @@ let cfg = config.home; in {
 
     flakeDir = mkOption { type = str; default = "${cfg.dir}/.config/dotfiles"; };
 
-    impure.enable = mkOption {
-      type = bool;
-      default = true;
-      description = "Allow `ss swap` to replace Hjem store links with mutable local files.";
-    };
+    impure.enable = mkEnableOption "replacing Hjem store links with mutable local files via `ss swap`";
   };
 
   config = {

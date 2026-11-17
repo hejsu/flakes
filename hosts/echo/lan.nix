@@ -68,9 +68,4 @@
 
   # Hyper-V Internal LAN contains our own Windows host and VMs.
   networking.firewall.trustedInterfaces = [ "lan0" ];
-
-  networking.firewall.interfaces.lan0 = {
-    allowedTCPPorts = [ 53 ];
-    allowedUDPPorts = [ 53 67 ];
-  };
 }
