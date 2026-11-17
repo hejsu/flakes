@@ -1,6 +1,8 @@
 {
   system = "x86_64-linux";
 
+  includes = [ ./openchamber.nix ];
+
   profiles = {
     user = "suspen";
     role = "workstation";
