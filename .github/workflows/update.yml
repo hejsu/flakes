@@ -34,7 +34,6 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      checks: read
     outputs:
       pr: ${{ steps.pr.outputs.pull-request-number }}
       branch: automation/${{ env.CHECK_ONLY == 'true' && 'caddy-hash' || 'flake-update' }}
@@ -57,14 +56,24 @@ jobs:
           REQUESTED_INPUTS: ${{ inputs.inputs }}
           FORCE_CADDY: ${{ inputs['refresh-caddy'] || false }}
           PUSH_BASE: ${{ github.event.before }}
-          GH_TOKEN: ${{ github.token }}
           GIT_AUTHOR_NAME: github-actions[bot]
           GIT_AUTHOR_EMAIL: github-actions[bot]@users.noreply.github.com
           GIT_COMMITTER_NAME: github-actions[bot]
           GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
         run: python3 .github/scripts/update-inputs.py
 
+      # A no-op check must not let create-pull-request close an existing repair PR.
+      - name: Detect a Caddy repair
+        id: caddy
+        if: env.CHECK_ONLY == 'true'
+        run: |
+          changed=$(git diff --name-only HEAD -- modules/services/caddy.nix)
+          if [ -n "$changed" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Prepare PR description and package diff
+        if: env.CHECK_ONLY != 'true' || steps.caddy.outputs.changed == 'true'
         env:
           BASE_COMMIT: ${{ steps.checkout.outputs.commit }}
           OUTPUT: ${{ runner.temp }}/update-pr.md
@@ -72,6 +81,7 @@ jobs:
 
       - name: Create or update pull request
         id: pr
+        if: env.CHECK_ONLY != 'true' || steps.caddy.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           base: main

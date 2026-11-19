@@ -40,14 +40,6 @@ elif previous:
 
 # No baseline (first push, rewritten history, or manual check): refresh once.
 after = recipe()
-if before == after and os.getenv("CHECK_ONLY") == "true":
-    # An unchanged recipe is not a safe baseline if the previous build failed.
-    passed = subprocess.check_output([
-        "gh", "api", f"repos/{os.environ['GITHUB_REPOSITORY']}/commits/{previous}/check-runs?per_page=100",
-        "--jq", 'any(.check_runs[]; .app.slug == "github-actions" and (.name | endswith("Cache x86_64-linux")) and .conclusion == "success")',
-    ], text=True).strip()
-    if passed != "true":
-        before = None
 if before != after or os.getenv("FORCE_CADDY") == "true":
     # Nix 2.35 copies flake sources to the store lazily, so the store path
     # reported by `nix flake metadata` (which nix-update relies on to obtain

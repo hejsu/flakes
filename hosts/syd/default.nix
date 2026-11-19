@@ -24,6 +24,23 @@
   };
 
   settings = {
+    sops.secrets."research-zotero-api-key" = {
+      owner = "suspen";
+      mode = "0400";
+    };
+    sops.secrets."research-webdav-url" = {
+      owner = "suspen";
+      mode = "0400";
+    };
+    sops.secrets."research-webdav-username" = {
+      owner = "suspen";
+      mode = "0400";
+    };
+    sops.secrets."research-webdav-password" = {
+      owner = "suspen";
+      mode = "0400";
+    };
+
     system.stateVersion = "26.11";
   };
 

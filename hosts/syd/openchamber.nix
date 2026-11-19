@@ -1,7 +1,5 @@
 # OpenChamber web UI for OpenCode, with local socket activation.
-{ self, config, lib, pkgs, ... }:
-
-{
+{ self, config, lib, pkgs, ... }: {
   user.packages = [
     pkgs.devenv
     self.inputs.llm-agents.packages.opencode2
@@ -9,13 +7,9 @@
 
   networking.firewall.allowedTCPPorts = [ 6767 ];
 
-  # The UI is reachable from the LAN/tailnet and exposes a shell, so require
-  # OpenChamber's own password.
   sops.secrets."openchamber-ui-password" = { };
-
   sops.templates."openchamber.env" = {
     owner = config.user.name;
-    mode = "0400";
     restartUnits = [ "openchamber.service" ];
     content = ''
       OPENCHAMBER_UI_PASSWORD="${config.sops.placeholder."openchamber-ui-password"}"
