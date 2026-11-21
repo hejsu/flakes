@@ -1,7 +1,10 @@
 {
   system = "x86_64-linux";
 
-  includes = [ ./openchamber.nix ];
+  includes = [
+    ./openchamber.nix
+    ./syncthing.nix
+  ];
 
   profiles = {
     user = "suspen";

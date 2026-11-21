@@ -13,6 +13,7 @@
     ./apps
     ./parity.nix
     ./sops.nix
+    ./syncthing.nix
     ./user.nix
     ./zoxide.nix
   ];

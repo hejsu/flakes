@@ -1,6 +1,8 @@
 {
   system = "aarch64-darwin";
 
+  includes = [ ./syncthing.nix ];
+
   profiles = {
     user = "suspen";
     role = "laptop";
