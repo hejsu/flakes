@@ -111,16 +111,6 @@ local folder (iCloud Desktop & Documents sync is off on this machine).
     (require 'org-tempo))
 #+end_src
 
-** Skip the link modules we never use
-
-Loading the default ~org-modules~ costs ~0.4s, of which ~ol-gnus~ alone is
-~0.3s.  Plain ~file:~ links keep working; only prefixes like ~info:~ or
-~docview:~ would stop opening.
-
-#+begin_src emacs-lisp
-  (setq org-modules nil)
-#+end_src
-
 ** Turn off some eye-candy stuff
 
 #+begin_src emacs-lisp

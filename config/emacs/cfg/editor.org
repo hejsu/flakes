@@ -12,12 +12,6 @@
 
 Straight.el is used for package management.
 
-*** Disable startup check
-
-#+begin_src emacs-lisp
-  (setq straight-check-for-modifications '(check-on-save))
-#+end_src
-
 *** Disable native compilation
 
 #+begin_src emacs-lisp

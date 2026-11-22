@@ -14,5 +14,5 @@
 (load-config "editor")
 (load-config "writing")
 (load-config "programming")
-(load-config "addons" t)
-(load-config "llm" t)
+(load-config "addons")
+(load-config "llm")

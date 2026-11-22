@@ -82,6 +82,11 @@
 (setq straight-profiles
       '((nil . "~/.config/emacs/straight-versions.el")))
 
+;; Skip startup modification scans and detect edits to straight repos on save
+;; instead.  Must be set before straight bootstraps so `find-at-startup' does
+;; not run and `straight-live-modifications-mode' is enabled.
+(setq straight-check-for-modifications '(check-on-save))
+
 ;; Setup straight as package manager
 (defvar bootstrap-version)
 (let ((bootstrap-file
@@ -110,6 +115,12 @@
 ;; loaded built-in Org, producing a broken mixture and the
 ;; "Org version mismatch" warning on every start.
 (add-to-list 'straight-built-in-pseudo-packages 'org)
+
+;; Skip the default Org link modules we never use (`org-modules' is read when
+;; `org' is first loaded, so this must be set before any `(require 'org)').
+;; Loading them costs ~0.4s, of which `ol-gnus' alone is ~0.3s.  Plain `file:'
+;; links keep working; only prefixes like `info:' or `docview:' stop opening.
+(setq org-modules nil)
 
 ;; Same for transient: Emacs 31 ships 0.13.3, magit asks for >= 0.13 and every
 ;; transient-* symbol it references exists there, so straight should not pull a
