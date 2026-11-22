@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
-"""Prepare the update PR body: lock changelog, Caddy diff, closure package diff."""
+"""Render, diff, and update closure reports in dependency-update PR bodies."""
 
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-BASE = os.environ["BASE_COMMIT"]
-OUTPUT = Path(os.environ["OUTPUT"])
-OLD = f"git+file://{ROOT}?rev={BASE}"
-CONFIGURATIONS = ("nixosConfigurations", "darwinConfigurations")
+START = "<!-- update-report:start -->"
+END = "<!-- update-report:end -->"
 BODY_LIMIT = 60_000
 
 
-def run(*args):
+def run(*args, input=None):
     return subprocess.run(
-        args, cwd=ROOT, check=True, text=True, stdout=subprocess.PIPE
+        args, cwd=ROOT, check=True, text=True, input=input, stdout=subprocess.PIPE
     ).stdout
 
 
@@ -24,80 +23,76 @@ def nix(*args):
     return run("nix", *args)
 
 
-def git(*args):
-    return run("git", *args)
-
-
-def targets():
-    for configs in CONFIGURATIONS:
-        try:
-            names = json.loads(nix(
-                "eval", "--json", "--no-update-lock-file", f".#{configs}",
-                "--apply", "configs: builtins.attrNames configs",
-            ))
-        except subprocess.CalledProcessError as exc:
-            yield configs, None, f"host discovery unavailable (exit {exc.returncode})"
-            continue
-        for name in names:
-            label = f"{configs}.{name}"
-            yield label, f"{label}.config.system.build.toplevel", None
-
-
-def closure_diff():
-    blocks = []
-    for label, attr, error in targets():
-        if error is not None:
-            diff = error
-        else:
-            try:
-                old = nix("path-info", "--derivation", "--no-update-lock-file",
-                          f"{OLD}#{attr}").strip()
-                new = nix("path-info", "--derivation", "--no-update-lock-file",
-                          f"path:.#{attr}").strip()
-                diff = nix("run", "--no-update-lock-file", "--inputs-from", ".",
-                           "nixpkgs#dix", "--", "diff", "--full", "--color=never",
-                           old, new)
-            except subprocess.CalledProcessError as exc:
-                diff = f"closure diff unavailable (exit {exc.returncode})"
-        blocks.append(f"# {label}\n{diff.rstrip()}")
-    return "\n\n".join(blocks)
-
-
-def pr_body(body):
-    if len(body) <= BODY_LIMIT:
-        return body
-
-    notice = "\n\nPR description truncated at 60,000 characters.\n"
-    # Reserve room to close a code block if the cutoff falls inside one.
-    closing = "\n```"
-    prefix = body[:BODY_LIMIT - len(notice) - len(closing)]
-    if prefix.count("```") % 2:
-        prefix += closing
-    return prefix + notice
-
-
-def main():
-    # Only a dependency update (a new lock commit) needs a closure diff; plain
-    # pushes must not pay for evaluating every host on every commit.
-    report = closure_diff() if git("rev-list", f"{BASE}..HEAD").strip() else ""
+def render():
+    base = os.environ["BASE_COMMIT"]
     body = "\n".join([
         "```text",
-        git("log", "--format=%b", f"{BASE}..HEAD").rstrip(),
+        run("git", "log", "--format=%b", f"{base}..HEAD").rstrip(),
         "```",
         "",
         "```diff",
-        git("diff", "--", "modules/services/caddy.nix").rstrip(),
+        run("git", "diff", "--", "modules/services/caddy.nix").rstrip(),
         "```",
         "",
-        "<!-- update-report:start -->",
-        "```text",
-        report,
-        "```",
-        "<!-- update-report:end -->",
+        START,
+        "_Waiting for build to generate closure diff…_",
+        END,
         "",
     ])
-    OUTPUT.write_text(pr_body(body), encoding="utf-8")
+    Path(os.environ["OUTPUT"]).write_text(body, encoding="utf-8")
+
+
+def diff():
+    base = os.environ["DIFF_BASE"]
+    configs = os.environ["CONFIGURATIONS"]
+    hosts = json.loads(Path(os.environ["HOSTS_JSON"]).read_text(encoding="utf-8"))
+    prefix = os.environ["RESULT_PREFIX"]
+    dix = Path(nix("build", "--no-link", "--print-out-paths", "--no-update-lock-file",
+                   "--inputs-from", ".", "nixpkgs#dix").strip()) / "bin" / "dix"
+
+    blocks = []
+    for i, host in enumerate(hosts):
+        label = f"{configs}.{host}"
+        new = str(Path(f"{prefix}-{i}" if i else prefix).resolve())
+        try:
+            old = nix("eval", "--raw", "--no-update-lock-file",
+                      f"git+file://{ROOT}?rev={base}#{label}.config.system.build.toplevel.outPath").strip()
+            if old != new:
+                # Realising a store path directly substitutes from caches (even
+                # for allowSubstitutes = false outputs) and never builds locally.
+                nix("build", "--no-link", old)
+            out = run(str(dix), "diff", "--color=never", old, new)
+        except subprocess.CalledProcessError as exc:
+            out = f"closure diff unavailable (exit {exc.returncode})"
+        blocks.append(f"# {label}\n{out.rstrip()}")
+
+    output = Path(os.environ["OUTPUT"])
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text("\n\n".join(blocks) + "\n", encoding="utf-8")
+
+
+def splice(body, report):
+    s, e = body.find(START), body.find(END)
+    prefix, suffix = (body[:s], body[e + len(END):]) if 0 <= s < e else (body.rstrip() + "\n\n", "\n")
+    head = f"{START}\n```text\n"
+    tail = f"\n```\n{END}"
+    full = prefix + head + report + tail + suffix
+    if len(full) <= BODY_LIMIT:
+        return full
+    tail = f"\n```\n\nPR description truncated at 60,000 characters.\n{END}"
+    avail = max(0, BODY_LIMIT - len(prefix) - len(suffix) - len(head) - len(tail))
+    return prefix + head + report[:avail].rstrip() + tail + suffix
+
+
+def update():
+    pr = os.environ["PR_NUMBER"]
+    diff_dir = Path(os.environ["DIFF_DIR"])
+    files = sorted(diff_dir.glob("*.txt"), key=lambda p: (not p.name.startswith("nixos"), p.name)) if diff_dir.is_dir() else []
+    parts = [t for p in files if (t := p.read_text(encoding="utf-8").strip())]
+    report = "\n\n".join(parts) or "closure diff unavailable (no build reports produced)"
+    body = run("gh", "pr", "view", pr, "--json", "body", "--jq", ".body")
+    run("gh", "pr", "edit", pr, "--body-file", "-", input=splice(body, report))
 
 
 if __name__ == "__main__":
-    main()
+    {"render": render, "diff": diff, "update": update}[sys.argv[1]]()

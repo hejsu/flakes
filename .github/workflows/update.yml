@@ -37,6 +37,7 @@ jobs:
     outputs:
       pr: ${{ steps.pr.outputs.pull-request-number }}
       branch: automation/${{ env.CHECK_ONLY == 'true' && 'caddy-hash' || 'flake-update' }}
+      base: ${{ steps.checkout.outputs.commit }}
       check_only: ${{ env.CHECK_ONLY }}
 
     env:
@@ -72,12 +73,12 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Prepare PR description and package diff
+      - name: Prepare PR description
         if: env.CHECK_ONLY != 'true' || steps.caddy.outputs.changed == 'true'
         env:
           BASE_COMMIT: ${{ steps.checkout.outputs.commit }}
           OUTPUT: ${{ runner.temp }}/update-pr.md
-        run: python3 .github/scripts/update-report.py
+        run: python3 .github/scripts/update-report.py render
 
       - name: Create or update pull request
         id: pr
@@ -104,5 +105,34 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       ref: ${{ needs.prepare.outputs.pr != '' && format('refs/heads/{0}', needs.prepare.outputs.branch) || '' }}
+      diff-base: ${{ needs.prepare.outputs.pr != '' && needs.prepare.outputs.base || '' }}
     secrets:
       CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+  report:
+    name: Update PR closure diff
+    needs: [prepare, build]
+    if: ${{ !cancelled() && needs.prepare.result == 'success' && needs.prepare.outputs.pr != '' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          pattern: closure-diff-*
+          path: ${{ runner.temp }}/closure-diff
+          merge-multiple: true
+
+      - name: Update pull request description
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ needs.prepare.outputs.pr }}
+          DIFF_DIR: ${{ runner.temp }}/closure-diff
+        run: python3 .github/scripts/update-report.py update

@@ -10,6 +10,11 @@ on:
         type: string
         required: false
         default: ''
+      diff-base:
+        description: 'Base git commit to diff built closures against; empty skips diffing'
+        type: string
+        required: false
+        default: ''
     secrets:
       CACHIX_AUTH_TOKEN:
         required: true
@@ -62,6 +67,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
+          fetch-depth: ${{ inputs.diff-base == '' && 1 || 0 }}
           persist-credentials: false
 
       - name: Check settings
@@ -119,3 +125,23 @@ jobs:
             cachix pin "$CACHE" "main-$host" "$result" --keep-revisions 1
             index=$((index + 1))
           done < <(jq -r '.[]' "$RUNNER_TEMP/hosts.json")
+
+      - name: Diff runtime closures
+        if: inputs.diff-base != '' && steps.hosts.outputs.count != '0'
+        continue-on-error: true
+        env:
+          DIFF_BASE: ${{ inputs.diff-base }}
+          HOSTS_JSON: ${{ runner.temp }}/hosts.json
+          RESULT_PREFIX: ${{ runner.temp }}/result
+          OUTPUT: ${{ runner.temp }}/closure-diff/${{ matrix.configurations }}-${{ matrix.system }}.txt
+        run: python3 .github/scripts/update-report.py diff
+
+      - name: Upload closure diff
+        if: inputs.diff-base != '' && steps.hosts.outputs.count != '0'
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: closure-diff-${{ matrix.system }}
+          path: ${{ runner.temp }}/closure-diff/*.txt
+          if-no-files-found: ignore
+          retention-days: 1
